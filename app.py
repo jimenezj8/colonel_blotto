@@ -532,65 +532,53 @@ def handle_new_game_submission(ack, view, client: WebClient, context, logger):
 
     ack()
 
-    try:
-        game_id = database.create_new_game(
-            num_rounds, round_length, signup_close
-        ).inserted_primary_key[0]
-        database.generate_rounds(game_id, num_rounds, round_length, signup_close)
+    game_id = database.create_new_game(
+        num_rounds, round_length, signup_close
+    ).inserted_primary_key[0]
+    database.generate_rounds(game_id, num_rounds, round_length, signup_close)
 
-        client.chat_postMessage(
-            token=os.environ.get("BOT_TOKEN"),
-            channel=view["state"]["values"]["advertise_to_channels"][
-                "advertise_to_channels"
-            ]["selected_channel"],
-            text=(
-                f"<@{context['user_id']}> has started a new game of Blotto!\n\n"
-                "Raise your hands :man-raising-hand: :woman-raising-hand: "
-                f"to test your grit and game theory over the course of {num_rounds} rounds "
-                f"in a round-robin style tournament. Each round will have a submission window of "
-                f"{round_length / datetime.timedelta(hours=1)} hour(s).\n\n"
-                "Rules for each round will be announced at the start of the submission window for that round, "
-                f"and the signup period for Game {game_id} will close "
-                f"<!date^{int(signup_close.timestamp())}^{{date_short_pretty}} at {{time}}|{signup_close.strftime('%Y-%m-%d %H:%M %Z')}>.\n\n"
-                "To learn more, read about the Colonel Blotto game <https://en.wikipedia.org/wiki/Blotto_game|here> "
-                "or check out the homepage of this app. Brought to you by Jovi :smile:"
-            ),
-            metadata={
-                "event_type": "message",
-                "event_payload": {"id": "", "title": f"game {game_id}"},
-            },
-            unfurl_media=False,
-        )
+    client.chat_postMessage(
+        token=os.getenv("BOT_TOKEN"),
+        channel=view["state"]["values"]["advertise_to_channels"][
+            "advertise_to_channels"
+        ]["selected_channel"],
+        text=(
+            f"<@{context['user_id']}> has started a new game of Blotto!\n\n"
+            "Raise your hands :man-raising-hand: :woman-raising-hand: "
+            f"to test your grit and game theory over the course of {num_rounds} rounds "
+            f"in a round-robin style tournament. Each round will have a submission window of "
+            f"{round_length / datetime.timedelta(hours=1)} hour(s).\n\n"
+            "Rules for each round will be announced at the start of the submission window for that round, "
+            f"and the signup period for Game {game_id} will close "
+            f"<!date^{int(signup_close.timestamp())}^{{date_short_pretty}} at {{time}}|{signup_close.strftime('%Y-%m-%d %H:%M %Z')}>.\n\n"
+            "To learn more, read about the Colonel Blotto game <https://en.wikipedia.org/wiki/Blotto_game|here> "
+            "or check out the homepage of this app. Brought to you by Jovi :smile:"
+        ),
+        metadata={
+            "event_type": "message",
+            "event_payload": {"id": "", "title": f"game {game_id}"},
+        },
+        unfurl_media=False,
+    )
 
-        client.chat_scheduleMessage(
-            token=os.environ.get("BOT_TOKEN"),
-            channel=view["state"]["values"]["advertise_to_channels"][
-                "advertise_to_channels"
-            ]["selected_channel"],
-            post_at=int(signup_close.timestamp()),
-            text=(
-                f"Game {game_id} has now begun!\n\n"
-                f"<@{client.auth_test()['user_id']}> will post the rules for Round 1 shortly, and participants will have "
-                f"{round_length / datetime.timedelta(hours=1)} hour(s) to get their submission in.\n\n"
-                "Good luck! :fist:"
-            ),
-            metadata={
-                "event_type": "message",
-                "event_payload": {"id": "", "title": f"game {game_id}"},
-            },
-            unfurl_media=False,
-        )
-    except Exception as e:
-        logger.debug(e)
-        client.chat_postEphemeral(
-            token=os.environ.get("BOT_TOKEN"),
-            channel=view["state"]["values"]["advertise_to_channels"][
-                "advertise_to_channels"
-            ]["selected_channel"],
-            text=f"There was an issue creating the game, please try again in a bit or let Jovi know if there is a recurring issue.",
-            user=context["user_id"],
-        )
-        return
+    client.chat_scheduleMessage(
+        token=os.getenv("BOT_TOKEN"),
+        channel=view["state"]["values"]["advertise_to_channels"][
+            "advertise_to_channels"
+        ]["selected_channel"],
+        post_at=int(signup_close.timestamp()),
+        text=(
+            f"Game {game_id} has now begun!\n\n"
+            f"<@{client.auth_test()['user_id']}> will post the rules for Round 1 shortly, and participants will have "
+            f"{round_length / datetime.timedelta(hours=1)} hour(s) to get their submission in.\n\n"
+            "Good luck! :fist:"
+        ),
+        metadata={
+            "event_type": "message",
+            "event_payload": {"id": "", "title": f"game {game_id}"},
+        },
+        unfurl_media=False,
+    )
 
 
 if __name__ == "__main__":
