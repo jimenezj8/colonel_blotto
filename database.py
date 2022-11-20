@@ -8,7 +8,7 @@ import sqlalchemy as sa
 import blotto
 
 
-engine = sa.create_engine(os.environ.get("BLOTTO_DB"))
+engine = sa.create_engine(os.environ.get("BLOTTO_DB"), echo=True)
 
 
 def table_exists(table_name: str):
