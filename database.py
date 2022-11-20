@@ -214,9 +214,7 @@ def get_game_start(game_id):
     with engine.connect() as con:
         result = con.execute(select).first()[-1]
 
-    logging.info(f"Retrieve game start time of {result}")
-
-    return pytz.utc.localize(result).astimezone(pytz.timezone("US/Pacific"))
+    return result
 
 
 def get_user_signups(user_id):
