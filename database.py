@@ -140,8 +140,8 @@ def add_user_to_game(user_id, game_id):
 
 def remove_user_from_game(user_id, game_id):
     metadata = sa.MetaData(engine)
+    metadata.reflect()
 
-    games = metadata.tables["games"]
     signups = metadata.tables["signups"]
 
     delete = signups.delete().where(
