@@ -596,6 +596,12 @@ if __name__ == "__main__":
     if not database.table_exists("signups"):
         database.create_signups_table()
 
+    if not database.table_exists("rounds"):
+        database.create_rounds_table()
+
+    if not database.table_exists("submissions"):
+        database.create_submissions_table()
+
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
     try:

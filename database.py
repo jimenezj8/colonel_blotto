@@ -4,6 +4,9 @@ import os
 import pytz
 import sqlalchemy as sa
 
+import blotto
+
+
 engine = sa.create_engine(os.environ.get("BLOTTO_DB"))
 
 
