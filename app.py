@@ -363,7 +363,7 @@ def add_participant(event, client: WebClient, logger):
         logger.info("Message did not meet criteria for valid signup request")
         return
 
-    # verify that user did not remove accidental duplicate signup
+    # verify that user did not add accidental duplicate signup
     other_reactions = message.get("reactions", [])
     for reaction in other_reactions:
         if not "raising-hand" in reaction["name"] or reaction["name"] == reacji:
@@ -388,16 +388,7 @@ def add_participant(event, client: WebClient, logger):
         )
         return
 
-    try:
-        database.add_user_to_game(user_id, game_id)
-    except Exception as e:
-        print(e)
-        client.chat_postEphemeral(
-            token=os.getenv("BOT_TOKEN"),
-            channel=message_channel,
-            text=f"There was an issue adding you to the signup sheet for game {game_id}",
-            user=user_id,
-        )
+    database.add_user_to_game(user_id, game_id)
 
     logger.info("User signed up for game successfully")
 
