@@ -173,7 +173,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
                 text=(
                     "Sorry, it looks like you're participating in multiple active games currently."
                     "Before you can submit your strategy, you must select which game it will apply to.\n\n"
-                    f"Choose from the following game IDs: {games}\n\n"
+                    f"Choose from the following game IDs: {', '.join(games)}\n\n"
                     "When you use the command `/submit_round` next time, please include the relevant game ID."
                 ),
             )
@@ -209,7 +209,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
                 text=(
                     "Sorry, I couldn't find any record of your participation in the game you indicated. "
                     "Please verify the game ID you provided before attempting to submit a strategy again.\n\n"
-                    f"For your reference, the games you are signed up for include: {games}"
+                    f"For your reference, the games you are signed up for include: {', '.join(games)}"
                 ),
             )
 
