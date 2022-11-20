@@ -478,15 +478,7 @@ def remove_participant(event, client, logger):
         )
         return
 
-    try:
-        database.remove_user_from_game(user_id, game_id)
-    except Exception:
-        client.chat_postEphemeral(
-            token=os.getenv("BOT_TOKEN"),
-            channel=message_channel,
-            text=f"There was an issue removing you from game {game_id}. Please try again in a couple of seconds.",
-            user=user_id,
-        )
+    database.remove_user_from_game(user_id, game_id)
 
     logger.info("User removed from game successfully")
 
