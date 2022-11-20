@@ -25,7 +25,7 @@ def create_games_table():
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("round_length", sa.Interval, nullable=False),
         sa.Column("num_rounds", sa.Integer, nullable=False),
-        sa.Column("start", sa.Text, nullable=False),
+        sa.Column("start", sa.DateTime, nullable=False),
     )
 
     games.create(engine)
@@ -162,7 +162,7 @@ def create_new_game(
     insert = games.insert().values(
         num_rounds=num_rounds,
         round_length=round_length,
-        start=game_start.strftime("%Y-%m-%d %H:%M"),
+        start=game_start,
     )
 
     with engine.connect() as con:
