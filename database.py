@@ -4,7 +4,7 @@ import os
 import pytz
 import sqlalchemy as sa
 
-engine = sa.create_engine(os.environ.get("SLACK_COLONEL_BLOTTO_DB"))
+engine = sa.create_engine(os.environ.get("BLOTTO_DB"))
 
 
 def table_exists(table_name: str):
