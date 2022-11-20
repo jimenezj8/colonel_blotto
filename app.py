@@ -516,18 +516,15 @@ def handle_new_game_submission(
     num_rounds = int(view["state"]["values"]["num_rounds"]["num_rounds"]["value"])
 
     round_length = view["state"]["values"]["round_length"]["round_length"]["value"]
-    try:
-        if "hour" in round_length:
-            round_length = datetime.timedelta(hours=int(round_length.split(" ")[0]))
 
-        elif "day" in round_length:
-            round_length = datetime.timedelta(days=int(round_length.split(" ")[0]))
+    if "hour" in round_length:
+        round_length = datetime.timedelta(hours=int(round_length.split(" ")[0]))
 
-        else:
-            round_length = datetime.timedelta(days=int(round_length))
-    except Exception as e:
-        print(e)
-        return  # Need to tell the user something went wrong with their input formatting
+    elif "day" in round_length:
+        round_length = datetime.timedelta(days=int(round_length.split(" ")[0]))
+
+    else:
+        round_length = datetime.timedelta(days=int(round_length))
 
     date_input = view["state"]["values"]["date"]["date"]["selected_date"]
     time_input = view["state"]["values"]["time"]["time"]["selected_time"]
@@ -538,12 +535,14 @@ def handle_new_game_submission(
         datetime.strptime(date_input + " " + time_input, "%Y-%m-%d %H:%M")
     )
 
+    logger.info("Valid params, creating game instance")
     ack()
 
     game_id = database.create_new_game(
         num_rounds, round_length, signup_close
     ).inserted_primary_key[0]
     database.generate_rounds(game_id, num_rounds, round_length, signup_close)
+    logger.info("Game created, announcing")
 
     client.chat_postMessage(
         token=os.getenv("BOT_TOKEN"),
@@ -569,6 +568,7 @@ def handle_new_game_submission(
         unfurl_media=False,
     )
 
+    logger.info("Game announced, scheduling signup close announcement")
     client.chat_scheduleMessage(
         token=os.getenv("BOT_TOKEN"),
         channel=view["state"]["values"]["advertise_to_channels"][
