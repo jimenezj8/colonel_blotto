@@ -332,6 +332,7 @@ def add_participant(event, client: WebClient, logger):
     reacji = event["reaction"]
 
     if not "raising-hand" in reacji:
+        logger.info("Not a valid signup reacji")
         return
 
     logger.info("Signup reaction detected")
