@@ -25,7 +25,7 @@ def create_games_table():
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("round_length", sa.Interval, nullable=False),
         sa.Column("num_rounds", sa.Integer, nullable=False),
-        sa.Column("start", sa.DateTime, nullable=False),
+        sa.Column("start", sa.DateTime(timezone=True), nullable=False),
     )
 
     games.create(engine)
