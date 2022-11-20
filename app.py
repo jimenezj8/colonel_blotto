@@ -543,7 +543,7 @@ def handle_new_game_submission(
         ]["selected_channel"],
         text=(
             f"<@{context['user_id']}> has started a new game of Blotto!\n\n"
-            "Raise your hands :man-raising-hand: :woman-raising-hand: "
+            "Raise your hands :man-raising-hand: :woman-raising-hand: :raising-hand: "
             f"to test your grit and game theory over the course of {num_rounds} rounds "
             f"in a round-robin style tournament. Each round will have a submission window of "
             f"{round_length / datetime.timedelta(hours=1)} hour(s).\n\n"
