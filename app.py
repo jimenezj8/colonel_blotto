@@ -532,7 +532,7 @@ def handle_new_game_submission(
         token=os.getenv("BOT_TOKEN"), user=context["user_id"]
     )["user"]["tz"]
     signup_close = pytz.timezone(timezone_input).localize(
-        datetime.strptime(date_input + " " + time_input, "%Y-%m-%d %H:%M")
+        datetime.datetime.strptime(date_input + " " + time_input, "%Y-%m-%d %H:%M")
     )
 
     logger.info("Valid params, creating game instance")
