@@ -11,11 +11,11 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.client import WebClient
 
-import blotto
+import blotto, database
 
 app = App(
-    token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
-    signing_secret=os.environ.get("SLACK_COLONEL_BLOTTO_SECRET"),
+    token=os.environ.get("BOT_TOKEN"),
+    signing_secret=os.environ.get("SIGNING_SECRET"),
 )
 
 logging.basicConfig(level=logging.DEBUG)
@@ -207,13 +207,13 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
     game_id = command["text"]
 
     if not game_id:
-        games = get_user_signups(user_id)
+        games = database.get_user_signups(user_id)
 
         if len(games) > 1:
             logger.info("User participating in multiple games, must select one")
             logger.info("Messaging user with game ids for active games")
             client.chat_postEphemeral(
-                token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+                token=os.environ.get("BOT_TOKEN"),
                 channel=command["channel_id"],
                 user=user_id,
                 text=(
@@ -230,7 +230,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
             logger.info("User is not participating in any active games")
             logger.info("Messaging user about the status of their participation")
             client.chat_postEphemeral(
-                token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+                token=os.environ.get("BOT_TOKEN"),
                 channel=command["channel_id"],
                 user=user_id,
                 text=(
@@ -245,11 +245,11 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
             game_id = games[0]
 
     else:
-        if not signup_exists(user_id, game_id):
+        if not database.signup_exists(user_id, game_id):
             logger.info("User is not signed up for indicated game")
             logger.info("Messaging user about the status of their participation")
             client.chat_postEphemeral(
-                token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+                token=os.environ.get("BOT_TOKEN"),
                 channel=command["channel_id"],
                 user=user_id,
                 text=(
@@ -333,7 +333,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
 def update_home_tab(client, event, logger):
     user_id = event["user"]
 
-    get_user_signups(user_id)
+    database.get_user_signups(user_id)
 
     try:
         # views.publish is the method that your app uses to push a view to the Home tab
@@ -391,7 +391,7 @@ def add_participant(event, client: WebClient, logger):
     user_id = event["user"]
 
     message = client.conversations_history(
-        token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+        token=os.environ.get("BOT_TOKEN"),
         channel=message_channel,
         oldest=message_ts,
         inclusive=True,
@@ -426,11 +426,11 @@ def add_participant(event, client: WebClient, logger):
 
     game_id = int(message["metadata"]["event_payload"]["title"].split(" ")[1])
 
-    if signup_exists(user_id, game_id):
+    if database.signup_exists(user_id, game_id):
         logger.info("User already signed up for game, request denied")
 
         client.chat_postEphemeral(
-            token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+            token=os.environ.get("BOT_TOKEN"),
             channel=message_channel,
             text=f"You have already signed up for game {game_id}. Glad you're excited, though!",
             user=user_id,
@@ -438,11 +438,11 @@ def add_participant(event, client: WebClient, logger):
         return
 
     try:
-        add_user_to_game(user_id, game_id)
+        database.add_user_to_game(user_id, game_id)
     except Exception as e:
         print(e)
         client.chat_postEphemeral(
-            token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+            token=os.environ.get("BOT_TOKEN"),
             channel=message_channel,
             text=f"There was an issue adding you to the signup sheet for game {game_id}",
             user=user_id,
@@ -450,10 +450,10 @@ def add_participant(event, client: WebClient, logger):
 
     logger.info("User signed up for game successfully")
 
-    game_start = get_game_start(game_id)
+    game_start = database.get_game_start(game_id)
 
     client.chat_postEphemeral(
-        token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+        token=os.environ.get("BOT_TOKEN"),
         channel=message_channel,
         text=f'You have been signed up for Blotto game {game_id}! Round 1 will begin at {game_start.strftime("%I:%M %p %Z %b %d, %Y")}.',
         user=user_id,
@@ -477,7 +477,7 @@ def remove_participant(event, client, logger):
     user_id = event["user"]
 
     message = client.conversations_history(
-        token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+        token=os.environ.get("BOT_TOKEN"),
         channel=message_channel,
         oldest=message_ts,
         inclusive=True,
@@ -512,11 +512,11 @@ def remove_participant(event, client, logger):
 
     game_id = int(message["metadata"]["event_payload"]["title"].split(" ")[1])
 
-    if not signup_exists(user_id, game_id):
+    if not database.signup_exists(user_id, game_id):
         logger.info("Signup record not located, cannot be removed")
 
         client.chat_postEphemeral(
-            token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+            token=os.environ.get("BOT_TOKEN"),
             channel=message_channel,
             text=f"I can't seem to find any record that you signed up for game {game_id}",
             user=user_id,
@@ -524,10 +524,10 @@ def remove_participant(event, client, logger):
         return
 
     try:
-        remove_user_from_game(user_id, game_id)
+        database.remove_user_from_game(user_id, game_id)
     except Exception:
         client.chat_postEphemeral(
-            token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+            token=os.environ.get("BOT_TOKEN"),
             channel=message_channel,
             text=f"There was an issue removing you from game {game_id}. Please try again in a couple of seconds.",
             user=user_id,
@@ -536,7 +536,7 @@ def remove_participant(event, client, logger):
     logger.info("User removed from game successfully")
 
     client.chat_postEphemeral(
-        token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+        token=os.environ.get("BOT_TOKEN"),
         channel=message_channel,
         text=f"You have been removed from Blotto game {game_id}. Sorry to see you go :cry:",
         user=user_id,
@@ -569,7 +569,7 @@ def handle_new_game_submission(ack, view, client: WebClient, context, logger):
     date_input = view["state"]["values"]["date"]["date"]["selected_date"]
     time_input = view["state"]["values"]["time"]["time"]["selected_time"]
     timezone_input = client.users_info(
-        token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"), user=context["user_id"]
+        token=os.environ.get("BOT_TOKEN"), user=context["user_id"]
     )["user"]["tz"]
     signup_close = pytz.timezone(timezone_input).localize(
         datetime.strptime(date_input + " " + time_input, "%Y-%m-%d %H:%M")
@@ -578,13 +578,13 @@ def handle_new_game_submission(ack, view, client: WebClient, context, logger):
     ack()
 
     try:
-        game_id = create_new_game(
+        game_id = database.create_new_game(
             num_rounds, round_length, signup_close
         ).inserted_primary_key[0]
-        generate_rounds(game_id, num_rounds, round_length, signup_close)
+        database.generate_rounds(game_id, num_rounds, round_length, signup_close)
 
         client.chat_postMessage(
-            token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+            token=os.environ.get("BOT_TOKEN"),
             channel=view["state"]["values"]["advertise_to_channels"][
                 "advertise_to_channels"
             ]["selected_channel"],
@@ -608,7 +608,7 @@ def handle_new_game_submission(ack, view, client: WebClient, context, logger):
         )
 
         client.chat_scheduleMessage(
-            token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+            token=os.environ.get("BOT_TOKEN"),
             channel=view["state"]["values"]["advertise_to_channels"][
                 "advertise_to_channels"
             ]["selected_channel"],
@@ -628,7 +628,7 @@ def handle_new_game_submission(ack, view, client: WebClient, context, logger):
     except Exception as e:
         logger.debug(e)
         client.chat_postEphemeral(
-            token=os.environ.get("SLACK_COLONEL_BLOTTO_TOKEN"),
+            token=os.environ.get("BOT_TOKEN"),
             channel=view["state"]["values"]["advertise_to_channels"][
                 "advertise_to_channels"
             ]["selected_channel"],
@@ -640,15 +640,13 @@ def handle_new_game_submission(ack, view, client: WebClient, context, logger):
 
 if __name__ == "__main__":
     try:
-        if not table_exists("games"):
-            create_games_table()
+        if not database.table_exists("games"):
+            database.create_games_table()
 
-        if not table_exists("signups"):
-            create_signups_table()
+        if not database.table_exists("signups"):
+            database.create_signups_table()
 
-        handler = SocketModeHandler(
-            app, os.environ.get("SLACK_COLONEL_BLOTTO_SOCKET_TOKEN")
-        )
+        handler = SocketModeHandler(app, os.environ.get("APP_TOKEN"))
         handler.start()
     except SlackApiError:
         sys.exit(0)
