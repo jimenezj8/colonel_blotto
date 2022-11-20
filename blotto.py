@@ -129,8 +129,10 @@ class RoundLibrary:
     # [id]: [round object reference] pairs
     ROUND_MAP = {DecreasingSoldiers.ID: DecreasingSoldiers}
 
-    def load_round(self, round_id, fields, soldiers):
-        return self.ROUND_MAP[round_id](fields, soldiers)
+    @classmethod
+    def load_round(cls, round_id, fields, soldiers):
+        return cls.ROUND_MAP[round_id](fields, soldiers)
 
-    def get_random(self):
-        return random.choice(list(self.ROUND_MAP.values()))
+    @classmethod
+    def get_random(cls):
+        return random.choice(list(cls.ROUND_MAP.values()))
