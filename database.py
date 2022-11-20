@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 
 import pytz
@@ -211,9 +212,9 @@ def get_game_start(game_id):
     select = games.select().where(games.c.id == game_id)
 
     with engine.connect() as con:
-        result = datetime.datetime.strptime(
-            con.execute(select).first()[-1], "%Y-%m-%d %H:%M"
-        )
+        result = con.execute(select).first()[-1]
+
+    logging.info(f"Retrieve game start time of {result}")
 
     return pytz.utc.localize(result).astimezone(pytz.timezone("US/Pacific"))
 
