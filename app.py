@@ -6,7 +6,7 @@ import urllib
 
 import pytz
 import requests
-from slack_bolt import App
+from slack_bolt import App, BoltContext, Ack
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.client import WebClient
@@ -504,7 +504,15 @@ def handle_round_submission(ack, view, client: WebClient, context, logger):
 
 
 @app.view("new_game")
-def handle_new_game_submission(ack, view, client: WebClient, context, logger):
+def handle_new_game_submission(
+    ack: Ack,
+    view: dict,
+    client: WebClient,
+    context: BoltContext,
+    logger: logging.Logger,
+):
+    logger.info("Parsing game parameter inputs")
+
     num_rounds = int(view["state"]["values"]["num_rounds"]["num_rounds"]["value"])
 
     round_length = view["state"]["values"]["round_length"]["round_length"]["value"]
