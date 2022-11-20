@@ -590,14 +590,16 @@ def handle_new_game_submission(
 
 
 if __name__ == "__main__":
+    if not database.table_exists("games"):
+        database.create_games_table()
+
+    if not database.table_exists("signups"):
+        database.create_signups_table()
+
+    handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
+
     try:
-        if not database.table_exists("games"):
-            database.create_games_table()
-
-        if not database.table_exists("signups"):
-            database.create_signups_table()
-
-        handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
         handler.start()
-    except SlackApiError:
+    except KeyboardInterrupt:
+        print("\nExiting")
         sys.exit(0)
