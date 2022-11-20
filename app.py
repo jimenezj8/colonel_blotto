@@ -21,51 +21,6 @@ app = App(
 logging.basicConfig(level=logging.DEBUG)
 
 
-def serve_game_selection_modal(games):  # TODO: decide on deleting or using this flow
-    view = {
-        "type": "modal",
-        "title": {"type": "plain_text", "text": "Which game?", "emoji": True},
-        "submit": {
-            "type": "plain_text",
-            "text": "Submit",
-        },
-        "close": {
-            "type": "plain_text",
-            "text": "Cancel",
-        },
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "Since you are participating in multiple games, please select one for which to submit a strategy.",
-                },
-                "accessory": {
-                    "type": "static_select",
-                    "placeholder": {
-                        "type": "plain_text",
-                        "text": "Select a game",
-                    },
-                    "options": [
-                        {
-                            "text": {
-                                "type": "plain_text",
-                                "text": f"Game {game_id}",
-                                "emoji": True,
-                            },
-                            "value": f"{game_id}",
-                        }
-                        for game_id in games
-                    ],
-                    "action_id": "game-select",
-                },
-            }
-        ],
-    }
-
-    return view
-
-
 @app.command("/modify_submission")
 def modify_round_submission(ack, respond, command):
     pass
