@@ -1,118 +1,18 @@
 import datetime
-import logging
 import os
 
-import pytz
 import sqlalchemy as sa
 
 import blotto
 
-
-engine = sa.create_engine(os.environ.get("BLOTTO_DB"), echo=True)
-
-
-def table_exists(table_name: str):
-    inspector = sa.inspect(engine)
-
-    return inspector.has_table(table_name)
+from models import MetaData
 
 
-def create_games_table():
-    metadata = sa.MetaData(engine)
-
-    games = sa.Table(
-        "games",
-        metadata,
-        sa.Column("id", sa.Integer, primary_key=True),
-        sa.Column("round_length", sa.Interval, nullable=False),
-        sa.Column("num_rounds", sa.Integer, nullable=False),
-        sa.Column("start", sa.DateTime(timezone=True), nullable=False),
-    )
-
-    games.create(engine)
-
-
-def create_signups_table():
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    signups = sa.Table(
-        "signups",
-        metadata,
-        sa.Column("id", sa.Integer, primary_key=True),
-        sa.Column(
-            "game_id", sa.ForeignKey("games.id", ondelete="CASCADE"), nullable=False
-        ),
-        sa.Column("user_id", sa.Text, nullable=False),
-    )
-
-    signups.create(engine)
-
-
-def create_rounds_table():
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    rounds = sa.Table(
-        "rounds",
-        metadata,
-        sa.Column("id", sa.Integer, nullable=False),
-        sa.Column(
-            "game_id", sa.ForeignKey("games.id", ondelete="CASCADE"), nullable=False
-        ),
-        sa.Column("number", sa.Integer, nullable=False),
-        sa.Column("start", sa.DateTime, nullable=False),
-        sa.Column("end", sa.DateTime, nullable=False),
-        sa.PrimaryKeyConstraint("id", "game_id", "number", name="rounds_pk"),
-    )
-
-    rounds.create(engine)
-
-
-def create_submissions_table():
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    submissions = sa.Table(
-        "submissions",
-        metadata,
-        sa.Column("id", sa.Integer, primary_key=True),
-        sa.Column(
-            "game_id", sa.ForeignKey("games.id", ondelete="CASCADE"), nullable=False
-        ),
-        sa.Column("user_id", sa.Text, nullable=False),
-        sa.Column("round_number", sa.Integer, nullable=False),
-        sa.Column("field_number", sa.Integer, nullable=False),
-        sa.Column("num_soliders", sa.Integer, nullable=False),
-    )
-
-    submissions.create(engine)
-
-
-def create_results_table():
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    results = sa.Table(
-        "results",
-        metadata,
-        sa.Column(
-            "game_id", sa.ForeignKey("games.id", ondelete="CASCADE"), primary_key=True
-        ),
-        sa.Column("user_id", sa.Text, nullable=False),
-        sa.Column("round_number", sa.Integer, nullable=False),
-        sa.Column("score", sa.Float, nullable=True),
-        sa.Column("rank", sa.Integer, nullable=True),
-    )
-
-    results.create(engine)
+engine = sa.create_engine(os.getenv("BLOTTO_DB"), echo=True)
 
 
 def signup_exists(user_id, game_id):
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    signups = metadata.tables["signups"]
+    signups = MetaData.tables["signups"]
 
     select = signups.select().where(
         signups.c.user_id == user_id, signups.c.game_id == game_id

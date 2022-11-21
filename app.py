@@ -10,7 +10,7 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.client import WebClient
 
-import blotto, database
+import blotto, db_utils
 
 app = App(
     token=os.getenv("BOT_TOKEN"),
@@ -161,7 +161,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
     game_id = command["text"]
 
     if not game_id:
-        games = database.get_user_signups(user_id)
+        games = db_utils.get_user_signups(user_id)
 
         if len(games) > 1:
             logger.info("User participating in multiple games, must select one")
@@ -199,7 +199,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
             game_id = games[0]
 
     else:
-        if not database.signup_exists(user_id, game_id):
+        if not db_utils.signup_exists(user_id, game_id):
             logger.info("User is not signed up for indicated game")
             logger.info("Messaging user about the status of their participation")
             client.chat_postEphemeral(
@@ -287,7 +287,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
 def update_home_tab(client, event, logger):
     user_id = event["user"]
 
-    database.get_user_signups(user_id)
+    db_utils.get_user_signups(user_id)
 
     # views.publish is the method that your app uses to push a view to the Home tab
     client.views_publish(
@@ -377,7 +377,7 @@ def add_participant(event, client: WebClient, logger):
 
     game_id = int(message["metadata"]["event_payload"]["title"].split(" ")[1])
 
-    if database.signup_exists(user_id, game_id):
+    if db_utils.signup_exists(user_id, game_id):
         logger.info("User already signed up for game, request denied")
 
         client.chat_postEphemeral(
@@ -388,11 +388,11 @@ def add_participant(event, client: WebClient, logger):
         )
         return
 
-    database.add_user_to_game(user_id, game_id)
+    db_utils.add_user_to_game(user_id, game_id)
 
     logger.info("User signed up for game successfully")
 
-    game_start = database.get_game_start(game_id)
+    game_start = db_utils.get_game_start(game_id)
 
     client.chat_postEphemeral(
         token=os.getenv("BOT_TOKEN"),
@@ -454,7 +454,7 @@ def remove_participant(event, client, logger):
 
     game_id = int(message["metadata"]["event_payload"]["title"].split(" ")[1])
 
-    if not database.signup_exists(user_id, game_id):
+    if not db_utils.signup_exists(user_id, game_id):
         logger.info("Signup record not located, cannot be removed")
 
         client.chat_postEphemeral(
@@ -465,7 +465,7 @@ def remove_participant(event, client, logger):
         )
         return
 
-    database.remove_user_from_game(user_id, game_id)
+    db_utils.remove_user_from_game(user_id, game_id)
 
     logger.info("User removed from game successfully")
 
@@ -521,10 +521,10 @@ def handle_new_game_submission(
     logger.info("Valid params, creating game instance")
     ack()
 
-    game_id = database.create_new_game(
+    game_id = db_utils.create_new_game(
         num_rounds, round_length, signup_close
     ).inserted_primary_key[0]
-    database.generate_rounds(game_id, num_rounds, round_length, signup_close)
+    db_utils.generate_rounds(game_id, num_rounds, round_length, signup_close)
     logger.info("Game created, announcing")
 
     client.chat_postMessage(
@@ -573,18 +573,6 @@ def handle_new_game_submission(
 
 
 if __name__ == "__main__":
-    if not database.table_exists("games"):
-        database.create_games_table()
-
-    if not database.table_exists("signups"):
-        database.create_signups_table()
-
-    if not database.table_exists("rounds"):
-        database.create_rounds_table()
-
-    if not database.table_exists("submissions"):
-        database.create_submissions_table()
-
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
     try:
