@@ -573,6 +573,8 @@ def handle_new_game_submission(
 
 
 if __name__ == "__main__":
+    db_utils.MetaData.create_all()
+
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
     try:

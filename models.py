@@ -5,7 +5,7 @@ import sqlalchemy.orm as orm
 
 
 engine = sa.create_engine(os.getenv("BLOTTO_DB"))
-Base = orm.declarative_base()
+Base = orm.declarative_base(bind=engine)
 
 
 class Game(Base):
@@ -41,7 +41,10 @@ class Round(Base):
     start = sa.Column(sa.DateTime, nullable=False)
     end = sa.Column(sa.DateTime, nullable=False)
 
-    sa.PrimaryKeyConstraint("game_id", "number", name="round_pk")
+    __tableargs__ = (
+        sa.PrimaryKeyConstraint(game_id, number, name="round_pk"),
+        {},
+    )
 
     def __repr__(self):
         return f"Round(id={self.id!r}, game_id={self.game_id!r}, number={self.round!r}, start={self.start!r}, end={self.end!r})"
@@ -52,7 +55,7 @@ class Submission(Base):
 
     id = sa.Column(sa.Integer, primary_key=True)
     game_id = sa.Column(sa.ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
-    user_id = (sa.Column(sa.Text, nullable=False),)
+    user_id = sa.Column(sa.Text, nullable=False)
     round_number = sa.Column(sa.Integer, nullable=False)
     field_number = sa.Column(sa.Integer, nullable=False)
     num_soldiers = sa.Column(sa.Integer, nullable=False)
