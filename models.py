@@ -26,7 +26,10 @@ class Participant(Base):
     game_id = sa.Column(sa.ForeignKey("game.id", ondelete="CASCADE"), nullable=False)
     user_id = sa.Column(sa.Text, nullable=False)
 
-    sa.PrimaryKeyConstraint(game_id, user_id, name="signup")
+    __tableargs__ = (
+        sa.PrimaryKeyConstraint(game_id, user_id, name="signup"),
+        {},
+    )
 
     def __repr__(self):
         return f"Participant(user_id={self.user_id!r}, game_id={self.game_id!r})"
@@ -54,7 +57,7 @@ class Submission(Base):
     __tablename__ = "submission"
 
     id = sa.Column(sa.Integer, primary_key=True)
-    game_id = sa.Column(sa.ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
+    game_id = sa.Column(sa.ForeignKey("game.id", ondelete="CASCADE"), nullable=False)
     user_id = sa.Column(sa.Text, nullable=False)
     round_number = sa.Column(sa.Integer, nullable=False)
     field_number = sa.Column(sa.Integer, nullable=False)
@@ -65,7 +68,7 @@ class Result(Base):
     __tablename__ = "result"
 
     # TODO: primarykeyconstraint on foreignkey signup from participant table
-    game_id = sa.Column(sa.ForeignKey("games.id", ondelete="CASCADE"), primary_key=True)
+    game_id = sa.Column(sa.ForeignKey("game.id", ondelete="CASCADE"), primary_key=True)
     user_id = sa.Column(sa.Text, nullable=False)
     round_number = sa.Column(sa.Integer, nullable=False)
     score = sa.Column(sa.Float, nullable=True)

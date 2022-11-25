@@ -12,7 +12,7 @@ engine = sa.create_engine(os.getenv("BLOTTO_DB"), echo=True)
 
 
 def signup_exists(user_id, game_id):
-    signups = MetaData.tables["signups"]
+    signups = MetaData.tables["participant"]
 
     select = signups.select().where(
         signups.c.user_id == user_id, signups.c.game_id == game_id
@@ -27,10 +27,7 @@ def signup_exists(user_id, game_id):
 
 
 def add_user_to_game(user_id, game_id):
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    signups = metadata.tables["signups"]
+    signups = MetaData.tables["participant"]
 
     insert = signups.insert().values(user_id=user_id, game_id=game_id)
 
@@ -39,10 +36,7 @@ def add_user_to_game(user_id, game_id):
 
 
 def remove_user_from_game(user_id, game_id):
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    signups = metadata.tables["signups"]
+    signups = MetaData.tables["participant"]
 
     delete = signups.delete().where(
         signups.c.user_id == user_id, signups.c.game_id == game_id
@@ -55,10 +49,7 @@ def remove_user_from_game(user_id, game_id):
 def create_new_game(
     num_rounds: int, round_length: datetime.timedelta, game_start: datetime.datetime
 ):
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    games = metadata.tables["games"]
+    games = MetaData.tables["game"]
 
     insert = games.insert().values(
         num_rounds=num_rounds,
@@ -72,17 +63,13 @@ def create_new_game(
     return result
 
 
-# TODO: convert all references to round_length to store datetime.timedelta
 def generate_rounds(
     game_id: int,
     num_rounds: int,
     round_length: datetime.timedelta,
     game_start: datetime.datetime,
 ):
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    rounds = metadata.tables["rounds"]
+    rounds = MetaData.tables["round"]
 
     values = []
     for round_number in range(num_rounds):
@@ -104,10 +91,7 @@ def generate_rounds(
 
 
 def get_game_start(game_id):
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    games = metadata.tables["games"]
+    games = MetaData.tables["game"]
 
     select = games.select().where(games.c.id == game_id)
 
@@ -118,10 +102,7 @@ def get_game_start(game_id):
 
 
 def get_user_signups(user_id):
-    metadata = sa.MetaData(engine)
-    metadata.reflect()
-
-    signups = metadata.tables["signups"]
+    signups = MetaData.tables["participant"]
 
     select = sa.select([signups.c.game_id]).where(signups.c.user_id == user_id)
 
