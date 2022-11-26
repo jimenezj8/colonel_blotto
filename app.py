@@ -5,9 +5,7 @@ import sys
 
 import pytz
 from slack_bolt import Ack, App, BoltContext
-from slack_bolt.error import BoltError
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from slack_sdk.errors import SlackApiError
 from slack_sdk.web.client import WebClient
 
 import blotto, db_utils
