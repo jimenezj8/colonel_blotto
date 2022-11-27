@@ -402,7 +402,7 @@ def add_participant(event, client: WebClient, logger):
 
 
 @app.event("reaction_removed")
-def remove_participant(event, client, logger):
+def remove_participant(event, client: WebClient, logger: logging.Logger):
     logger.info("Reaction removal registered")
 
     reacji = event["reaction"]
