@@ -374,7 +374,7 @@ def add_participant(event, client: WebClient, logger):
 
     logger.info("Valid user signup request")
 
-    game_id = int(message["metadata"]["event_payload"]["title"].split(" ")[1])
+    game_id = int(message["metadata"]["event_payload"]["game_id"])
 
     if db_utils.signup_exists(user_id, game_id):
         logger.info("User already signed up for game, request denied")
@@ -451,7 +451,7 @@ def remove_participant(event, client, logger):
 
     logger.info("Valid user signup removal request")
 
-    game_id = int(message["metadata"]["event_payload"]["title"].split(" ")[1])
+    game_id = int(message["metadata"]["event_payload"]["game_id"])
 
     if not db_utils.signup_exists(user_id, game_id):
         logger.info("Signup record not located, cannot be removed")
@@ -544,10 +544,9 @@ def handle_new_game_submission(
             "or check out the homepage of this app. Brought to you by Jovi :smile:"
         ),
         metadata={
-            "event_type": "message",
-            "event_payload": {"id": "", "title": f"game {game_id}"},
+            "event_type": "game_announced",
+            "event_payload": {"game_id": game_id},
         },
-        unfurl_media=False,
     )
 
     logger.info("Game announced, scheduling signup close announcement")
@@ -564,10 +563,9 @@ def handle_new_game_submission(
             "Good luck! :fist:"
         ),
         metadata={
-            "event_type": "message",
-            "event_payload": {"id": "", "title": f"game {game_id}"},
+            "event_type": "round_started",
+            "event_payload": {"game_id": game_id},
         },
-        unfurl_media=False,
     )
 
 
