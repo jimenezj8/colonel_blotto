@@ -476,6 +476,13 @@ def remove_participant(event, client: WebClient, logger: logging.Logger):
     )
 
 
+@app.event("message_metadata_posted")
+def handle_round_completion(client, payload, message, logger):
+    logger.info("Someone posted some metadata, yeehaw!")
+    print(payload)
+    print(message)
+
+
 @app.view("submit_round")
 def handle_round_submission(ack, view, client: WebClient, context, logger):
     pass
