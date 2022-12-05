@@ -555,6 +555,7 @@ def handle_new_game_submission(
             "event_type": "game_announced",
             "event_payload": {"game_id": game_id},
         },
+        unfurl_links=False,
     )
 
     logger.info("Game announced, scheduling signup close announcement")
