@@ -14,6 +14,7 @@ import blotto, db_utils
 app = App(
     token=os.getenv("BOT_TOKEN"),
     signing_secret=os.getenv("SIGNING_SECRET"),
+    ignoring_self_events_enabled=False,
 )
 
 logging.basicConfig(level=logging.DEBUG)
