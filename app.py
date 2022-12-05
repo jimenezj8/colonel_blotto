@@ -497,6 +497,7 @@ def handle_new_game_submission(
     context: BoltContext,
     logger: logging.Logger,
 ):
+    ack()
     logger.info("Parsing game parameter inputs")
 
     num_rounds = int(view["state"]["values"]["num_rounds"]["num_rounds"]["value"])
@@ -526,7 +527,6 @@ def handle_new_game_submission(
     )
 
     logger.info("Valid params, creating game instance")
-    ack()
 
     game_id = db_utils.create_new_game(
         num_rounds, round_length, signup_close
