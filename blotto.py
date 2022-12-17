@@ -125,4 +125,4 @@ class RoundLibrary:
 
     @classmethod
     def get_random(cls):
-        return random.choice(list(cls.ROUND_MAP.values()))
+        return random.choice(list(cls.ROUND_MAP.values()))()
