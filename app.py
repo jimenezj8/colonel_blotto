@@ -573,11 +573,13 @@ def handle_new_game_submission(
     db_utils.generate_rounds(game_id, num_rounds, round_length, signup_close)
     logger.info("Game created, announcing")
 
+    selected_channel = view["state"]["values"]["advertise_to_channels"][
+        "advertise_to_channels"
+    ]["selected_channel"]
+
     client.chat_postMessage(
         token=os.getenv("BOT_TOKEN"),
-        channel=view["state"]["values"]["advertise_to_channels"][
-            "advertise_to_channels"
-        ]["selected_channel"],
+        channel=selected_channel,
         text=(
             f"<@{context['user_id']}> has started a new game of Blotto!\n\n"
             "Raise your hands :man-raising-hand: :woman-raising-hand: "
@@ -592,7 +594,10 @@ def handle_new_game_submission(
         ),
         metadata={
             "event_type": "game_announced",
-            "event_payload": {"game_id": game_id},
+            "event_payload": {
+                "game_id": game_id,
+                "announcement_channel": selected_channel,
+            },
         },
         unfurl_links=False,
     )
@@ -600,9 +605,7 @@ def handle_new_game_submission(
     logger.info("Game announced, scheduling signup close announcement")
     client.chat_scheduleMessage(
         token=os.getenv("BOT_TOKEN"),
-        channel=view["state"]["values"]["advertise_to_channels"][
-            "advertise_to_channels"
-        ]["selected_channel"],
+        channel=selected_channel,
         post_at=int(signup_close.timestamp()),
         text=(
             f"Game {game_id} has now begun!\n\n"
@@ -611,8 +614,11 @@ def handle_new_game_submission(
             "Good luck! :fist:"
         ),
         metadata={
-            "event_type": "round_started",
-            "event_payload": {"game_id": game_id},
+            "event_type": "game_start",
+            "event_payload": {
+                "game_id": game_id,
+                "announcement_channel": selected_channel,
+            },
         },
     )
 
