@@ -6,29 +6,19 @@ logging.basicConfig(level=logging.INFO)
 
 
 class BlottoRound:
-    def __init__(self, fields, soldiers):
+    def __init__(self, fields: int, soldiers: int):
         if fields is None or soldiers is None:
             raise ValueError("Args [fields, soldiers] must not be None")
 
-        self.fields = fields
-        self.soldiers = soldiers
+        self._fields = fields
+        self._soldiers = soldiers
 
     @property
     def fields(self):
         return self._fields
 
-    @fields.setter
-    def fields(self):
-        logging.info("Number of fields for a configuration cannot be modified.")
-        return self._fields
-
     @property
     def soldiers(self):
-        return self._soldiers
-
-    @soldiers.setter
-    def soldiers(self):
-        logging.info("Number of soldiers for a configuration cannot be modified.")
         return self._soldiers
 
 
@@ -130,7 +120,7 @@ class RoundLibrary:
     ROUND_MAP = {DecreasingSoldiers.ID: DecreasingSoldiers}
 
     @classmethod
-    def load_round(cls, round_id, fields, soldiers):
+    def load_round(cls, round_id: int, fields: int, soldiers: int):
         return cls.ROUND_MAP[round_id](fields, soldiers)
 
     @classmethod
