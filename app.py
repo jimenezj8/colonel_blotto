@@ -478,10 +478,39 @@ def remove_participant(event, client: WebClient, logger: logging.Logger):
 
 
 @app.event("message_metadata_posted")
-def handle_round_completion(client, payload, message, logger):
-    logger.info("Someone posted some metadata, yeehaw!")
-    print(payload)
-    print(message)
+def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Logger):
+    logger.info("Received metadata, passing payload to handler")
+
+    metadata_type = payload["metadata"]["event_type"]
+    metadata_payload = payload["metadata"]["event_payload"]
+
+    match metadata_type:
+        case "game_announced":
+            logger.info("Game announcement, no action required")
+
+        case "game_start":
+            game_start_handler(client, metadata_payload, logger)
+
+        case "round_close":
+            round_close_handler(client, metadata_payload, logger)
+
+        case "game_end":
+            game_end_handler(client, metadata_payload, logger)
+
+    def game_start_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        logger.info("Game start, scheduling first round close message")
+
+    def round_close_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        logger.info("Round close, posting next round start")
+        logger.info("Calculating round results")
+        logger.info("Updating leaderboard")
+
+    def game_end_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        logger.info("Game end, posting announcement")
+        logger.info("Calculating round results")
+        logger.info("Calculating game results")
+        logger.info("Updating leaderboard")
+        logger.info("Posting game winner announcement")
 
 
 @app.view("submit_round")
