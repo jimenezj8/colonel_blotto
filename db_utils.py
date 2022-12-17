@@ -91,15 +91,11 @@ def generate_rounds(
     return result
 
 
-def get_game_start(game_id):
-    games = MetaData.tables["game"]
+def get_game_start(game_id: int):
+    select = sa.select(Game.start).where(Game.id == game_id)
 
-    select = games.select().where(games.c.id == game_id)
-
-    with Engine.connect() as con:
-        result = con.execute(select).first()[-1]
-
-    return result
+    with Session(Engine) as session:
+        return session.execute(select).first()[0]
 
 
 def get_user_signups(user_id):
