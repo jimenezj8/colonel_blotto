@@ -43,6 +43,8 @@ class Round(Base):
     number = sa.Column(sa.Integer, nullable=False)
     start = sa.Column(sa.DateTime, nullable=False)
     end = sa.Column(sa.DateTime, nullable=False)
+    fields = sa.Column(sa.Integer, nullable=False)
+    soldiers = sa.Column(sa.Integer, nullable=False)
 
     __tableargs__ = (
         sa.PrimaryKeyConstraint(game_id, number, name="round_pk"),

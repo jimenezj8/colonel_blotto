@@ -108,8 +108,17 @@ def get_user_signups(user_id):
     select = sa.select([signups.c.game_id]).where(signups.c.user_id == user_id)
 
     participating_in = []
-    with engine.connect() as con:
+    with Engine.connect() as con:
         for row in con.execute(select):
             participating_in.append(row[0])
 
     return participating_in
+
+
+def get_round(game_id: int, round_num: int):
+    select = sa.select(Round.id, Round.fields, Round.soldiers).where(
+        Round.game_id == game_id, Round.number == round_num
+    )
+
+    with Session(Engine) as session:
+        return session.execute(select).first()
