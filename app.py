@@ -479,6 +479,31 @@ def remove_participant(event, client: WebClient, logger: logging.Logger):
 
 @app.event("message_metadata_posted")
 def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Logger):
+    def game_start_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        logger.info(f"Game {payload['game_id']} starting")
+        logger.info("Posting rules for Round 1")
+        round_id, fields, soldiers = db_utils.get_round(payload["game_id"], 1)
+        logger.info(f"Round ID = {round_id}")
+        round = blotto.RoundLibrary.load_round(round_id, fields, soldiers)
+
+        client.chat_postMessage(
+            token=os.getenv("BOT_TOKEN"),
+            channel=payload["announcement_channel"],
+            text=round.RULES,
+        )
+
+    def round_close_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        logger.info("Round close, posting next round start")
+        logger.info("Calculating round results")
+        logger.info("Updating leaderboard")
+
+    def game_end_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        logger.info("Game end, posting announcement")
+        logger.info("Calculating round results")
+        logger.info("Calculating game results")
+        logger.info("Updating leaderboard")
+        logger.info("Posting game winner announcement")
+
     logger.info("Received metadata, passing payload to handler")
 
     metadata_type = payload["metadata"]["event_type"]
@@ -496,21 +521,6 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
 
         case "game_end":
             game_end_handler(client, metadata_payload, logger)
-
-    def game_start_handler(client: WebClient, payload: dict, logger: logging.Logger):
-        logger.info("Game start, scheduling first round close message")
-
-    def round_close_handler(client: WebClient, payload: dict, logger: logging.Logger):
-        logger.info("Round close, posting next round start")
-        logger.info("Calculating round results")
-        logger.info("Updating leaderboard")
-
-    def game_end_handler(client: WebClient, payload: dict, logger: logging.Logger):
-        logger.info("Game end, posting announcement")
-        logger.info("Calculating round results")
-        logger.info("Calculating game results")
-        logger.info("Updating leaderboard")
-        logger.info("Posting game winner announcement")
 
 
 @app.view("submit_round")
