@@ -3,12 +3,11 @@ import os
 
 import sqlalchemy as sa
 
+from sqlalchemy.orm import Session
+
 import blotto
 
-from models import MetaData
-
-
-engine = sa.create_engine(os.getenv("BLOTTO_DB"), echo=True)
+from models import Engine, MetaData, Game, Participant, Round, Submission, Result
 
 
 def signup_exists(user_id, game_id):
@@ -18,7 +17,7 @@ def signup_exists(user_id, game_id):
         signups.c.user_id == user_id, signups.c.game_id == game_id
     )
 
-    with engine.connect() as con:
+    with Engine.connect() as con:
         result = con.execute(select).all()
         if len(result) != 0:
             return True
@@ -31,7 +30,7 @@ def add_user_to_game(user_id, game_id):
 
     insert = signups.insert().values(user_id=user_id, game_id=game_id)
 
-    with engine.connect() as con:
+    with Engine.connect() as con:
         con.execute(insert)
 
 
@@ -42,7 +41,7 @@ def remove_user_from_game(user_id, game_id):
         signups.c.user_id == user_id, signups.c.game_id == game_id
     )
 
-    with engine.connect() as con:
+    with Engine.connect() as con:
         con.execute(delete)
 
 
@@ -57,7 +56,7 @@ def create_new_game(
         start=game_start,
     )
 
-    with engine.connect() as con:
+    with Engine.connect() as con:
         result = con.execute(insert)
 
     return result
@@ -80,11 +79,13 @@ def generate_rounds(
             "number": round_number + 1,
             "start": (game_start + round_length * round_number),
             "end": (game_start + round_length * (round_number + 1)),
+            "fields": round.fields,
+            "soldiers": round.soldiers,
         }
         values.append(row)
 
     insert = rounds.insert().values(values)
-    with engine.connect() as con:
+    with Engine.connect() as con:
         result = con.execute(insert)
 
     return result
@@ -95,7 +96,7 @@ def get_game_start(game_id):
 
     select = games.select().where(games.c.id == game_id)
 
-    with engine.connect() as con:
+    with Engine.connect() as con:
         result = con.execute(select).first()[-1]
 
     return result

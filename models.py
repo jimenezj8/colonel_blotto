@@ -4,8 +4,8 @@ import sqlalchemy as sa
 import sqlalchemy.orm as orm
 
 
-engine = sa.create_engine(os.getenv("BLOTTO_DB"))
-Base = orm.declarative_base(bind=engine)
+Engine = sa.create_engine(os.getenv("BLOTTO_DB"))
+Base = orm.declarative_base(bind=Engine)
 
 
 class Game(Base):
