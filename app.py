@@ -373,8 +373,6 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             logger.info("User added duplicate signup request, no further action")
             return
 
-    logger.info("Valid user signup request")
-
     game_id = int(message["metadata"]["event_payload"]["game_id"])
 
     if db_utils.signup_exists(user_id, game_id):
@@ -387,6 +385,22 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             user=user_id,
         )
         return
+
+    signup_close = db_utils.get_game_start(game_id)
+    if signup_close < datetime.datetime.fromtimestamp(
+        float(event["event_ts"]), pytz.utc
+    ):
+        logger.info("User signup requested after game start, request denied")
+
+        client.chat_postEphemeral(
+            token=os.getenv("BOT_TOKEN"),
+            channel=message_channel,
+            text=f"Sorry, the game you requested to participate in has already started.",
+            user=user_id,
+        )
+        return
+
+    logger.info("Valid user signup request")
 
     db_utils.add_user_to_game(user_id, game_id)
 
