@@ -91,7 +91,7 @@ def generate_rounds(
     return result
 
 
-def get_game_start(game_id: int):
+def get_game_start(game_id: int) -> datetime.datetime:
     select = sa.select(Game.start).where(Game.id == game_id)
 
     with Session(Engine) as session:
