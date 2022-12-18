@@ -326,7 +326,7 @@ def update_home_tab(client, event, logger):
 
 
 @app.event("reaction_added")
-def add_participant(event, client: WebClient, logger):
+def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     logger.info("Reaction registered on message")
 
     reacji = event["reaction"]
