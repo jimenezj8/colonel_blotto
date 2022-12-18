@@ -492,16 +492,35 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 @app.event("message_metadata_posted")
 def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Logger):
     def game_start_handler(client: WebClient, payload: dict, logger: logging.Logger):
-        logger.info(f"Game {payload['game_id']} starting")
-        logger.info("Posting rules for Round 1")
-        round_id, fields, soldiers = db_utils.get_round(payload["game_id"], 1)
-        logger.info(f"Round ID = {round_id}")
-        round = blotto.RoundLibrary.load_round(round_id, fields, soldiers)
+        game_id = payload["game_id"]
+
+        logger.info(f"Game {game_id} starting")
+        logger.info("Posting game announcement")
+
+        round_length = db_utils.get_round_length(game_id)
 
         client.chat_postMessage(
             token=os.getenv("BOT_TOKEN"),
             channel=payload["announcement_channel"],
-            text=round.RULES,
+            text=messages.game_start_announcement.format(
+                game_id=game_id, round_length=str(round_length)
+            ),
+        )
+
+        logger.info("Posting rules for Round 1")
+
+        round = db_utils.get_round(game_id, 1)
+        round_obj = blotto.RoundLibrary.ROUND_MAP[round.id]
+
+        client.chat_postMessage(
+            token=os.getenv("BOT_TOKEN"),
+            channel=payload["announcement_channel"],
+            text=messages.round_start_announcement.format(
+                game_id=game_id,
+                round_num=round.number,
+                round_end=int(round.end.timestamp()),
+                round_rules=round_obj.RULES,
+            ),
         )
 
     def round_close_handler(client: WebClient, payload: dict, logger: logging.Logger):

@@ -112,9 +112,14 @@ def get_user_signups(user_id):
 
 
 def get_round(game_id: int, round_num: int):
-    select = sa.select(Round.id, Round.fields, Round.soldiers).where(
-        Round.game_id == game_id, Round.number == round_num
-    )
+    select = sa.select(Round).where(Round.game_id == game_id, Round.number == round_num)
 
     with Session(Engine) as session:
-        return session.execute(select).first()
+        return session.execute(select).scalars().first()
+
+
+def get_round_length(game_id: int) -> datetime.timedelta:
+    select = sa.select(Game.round_length).where(Game.id == game_id)
+
+    with Session(Engine) as session:
+        return session.execute(select).first()[0]
