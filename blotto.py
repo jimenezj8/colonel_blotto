@@ -30,15 +30,13 @@ class DecreasingSoldiers(BlottoRound):
     ID = 1
     DIFFICULTY = 1
     RULES = """
-    In this round, all submissions must exhibit a decreasing number of soldiers in each next field.
+    All submissions must exhibit a decreasing number of soldiers in each next field.
     That is, if in Field 1, you wish to allocate 10 soldiers, Field 2 may have no more than 10 soldiers.
 
     Scoring will be as follows:
-    - In each field, score will be equal to:
-      - The difference in soldiers for the person with more soldiers
-      - 0 for the person with less soldiers
-
-    Please see the Colonel Blotto app homepage for more details on how score translates to overall performance and rank in this round.
+    * In each field, score will be equal to:
+        * The difference in soldiers for the person with more soldiers
+        * 0 for the person with less soldiers
     """
 
     def __init__(

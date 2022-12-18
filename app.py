@@ -5,11 +5,11 @@ import sys
 
 import pytz
 
-from slack_bolt import Ack, App, BoltContext
+from slack_bolt import Ack, App, BoltContext, Respond
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.web.client import WebClient
 
-import blotto, db_utils
+import blotto, db_utils, messages
 
 app = App(
     token=os.getenv("BOT_TOKEN"),
@@ -21,12 +21,14 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 @app.command("/modify_submission")
-def modify_round_submission(ack, respond, command):
+def modify_round_submission(ack: Ack, respond: Respond, command: dict):
     pass
 
 
 @app.command("/new_game")
-def serve_new_game_modal(ack, command, client: WebClient, logger):
+def serve_new_game_modal(
+    ack: Ack, command: dict, client: WebClient, logger: logging.Logger
+):
     """
     This function will create a new game of Blotto, which will consist of X number of rounds.
     There will be a preset of possible rules for a round, and they will be randomly selected from with no replacement.
@@ -154,7 +156,9 @@ def serve_new_game_modal(ack, command, client: WebClient, logger):
 
 
 @app.command("/submit_round")
-def serve_submission_modal(ack, command, client: WebClient, logger):
+def serve_submission_modal(
+    ack: Ack, command: dict, client: WebClient, logger: logging.Logger
+):
     ack()
 
     user_id = command["user_id"]
@@ -170,11 +174,8 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
                 token=os.getenv("BOT_TOKEN"),
                 channel=command["channel_id"],
                 user=user_id,
-                text=(
-                    "Sorry, it looks like you're participating in multiple active games currently."
-                    "Before you can submit your strategy, you must select which game it will apply to.\n\n"
-                    f"Choose from the following game IDs: {', '.join(games)}\n\n"
-                    "When you use the command `/submit_round` next time, please include the relevant game ID."
+                text=messages.submit_round_error_multiple_active_games.format(
+                    games=", ".join(games)
                 ),
             )
 
@@ -187,10 +188,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
                 token=os.getenv("BOT_TOKEN"),
                 channel=command["channel_id"],
                 user=user_id,
-                text=(
-                    "Sorry, it looks like you're not participating in any active games at the moment.\n\n"
-                    "Please sign up for a game before attempting to submit a strategy."
-                ),
+                text=messages.submit_round_error_no_active_games,
             )
 
             return
@@ -206,10 +204,8 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
                 token=os.getenv("BOT_TOKEN"),
                 channel=command["channel_id"],
                 user=user_id,
-                text=(
-                    "Sorry, I couldn't find any record of your participation in the game you indicated. "
-                    "Please verify the game ID you provided before attempting to submit a strategy again.\n\n"
-                    f"For your reference, the games you are signed up for include: {', '.join(games)}"
+                text=messages.submit_round_error_invalid_game.format(
+                    games=", ".join(games)
                 ),
             )
 
@@ -284,7 +280,7 @@ def serve_submission_modal(ack, command, client: WebClient, logger):
 
 
 @app.event("app_home_opened")
-def update_home_tab(client, event, logger):
+def update_home_tab(client: WebClient, event: dict, logger: logging.Logger):
     user_id = event["user"]
 
     db_utils.get_user_signups(user_id)
@@ -381,7 +377,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         client.chat_postEphemeral(
             token=os.getenv("BOT_TOKEN"),
             channel=message_channel,
-            text=f"You have already signed up for game {game_id}. Glad you're excited, though!",
+            text=messages.signup_request_error_duplicate.format(game_id=game_id),
             user=user_id,
         )
         return
@@ -395,7 +391,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         client.chat_postEphemeral(
             token=os.getenv("BOT_TOKEN"),
             channel=message_channel,
-            text=f"Sorry, the game you requested to participate in has already started.",
+            text=messages.signup_request_error_game_started,
             user=user_id,
         )
         return
@@ -411,13 +407,15 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     client.chat_postEphemeral(
         token=os.getenv("BOT_TOKEN"),
         channel=message_channel,
-        text=f'You have been signed up for Blotto game {game_id}! Round 1 will begin at {game_start.strftime("%I:%M %p %Z %b %d, %Y")}.',
+        text=messages.signup_request_success.format(
+            game_id=game_id, game_start=int(game_start.timestamp())
+        ),
         user=user_id,
     )
 
 
 @app.event("reaction_removed")
-def remove_participant(event, client: WebClient, logger: logging.Logger):
+def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     logger.info("Reaction removal registered")
 
     reacji = event["reaction"]
@@ -474,7 +472,7 @@ def remove_participant(event, client: WebClient, logger: logging.Logger):
         client.chat_postEphemeral(
             token=os.getenv("BOT_TOKEN"),
             channel=message_channel,
-            text=f"I can't seem to find any record that you signed up for game {game_id}",
+            text=messages.signup_remove_request_error_no_signup.format(game_id=game_id),
             user=user_id,
         )
         return
@@ -486,7 +484,7 @@ def remove_participant(event, client: WebClient, logger: logging.Logger):
     client.chat_postEphemeral(
         token=os.getenv("BOT_TOKEN"),
         channel=message_channel,
-        text=f"You have been removed from Blotto game {game_id}. Sorry to see you go :cry:",
+        text=messages.signup_remove_request_success.format(game_id=game_id),
         user=user_id,
     )
 
@@ -538,7 +536,13 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
 
 
 @app.view("submit_round")
-def handle_round_submission(ack, view, client: WebClient, context, logger):
+def handle_round_submission(
+    ack: Ack,
+    view: dict,
+    client: WebClient,
+    context: BoltContext,
+    logger: logging.Logger,
+):
     pass
 
 
@@ -553,9 +557,10 @@ def handle_new_game_submission(
     ack()
     logger.info("Parsing game parameter inputs")
 
-    num_rounds = int(view["state"]["values"]["num_rounds"]["num_rounds"]["value"])
+    inputs = view["state"]["values"]
 
-    round_length = view["state"]["values"]["round_length"]["round_length"]["value"]
+    num_rounds = int(inputs["num_rounds"]["num_rounds"]["value"])
+    round_length = inputs["round_length"]["round_length"]["value"]
 
     if "hour" in round_length:
         round_length = datetime.timedelta(hours=int(round_length.split(" ")[0]))
@@ -566,11 +571,12 @@ def handle_new_game_submission(
     else:
         round_length = datetime.timedelta(days=int(round_length))
 
-    date_input = view["state"]["values"]["date"]["date"]["selected_date"]
-    time_input = view["state"]["values"]["time"]["time"]["selected_time"]
+    date_input = inputs["date"]["date"]["selected_date"]
+    time_input = inputs["time"]["time"]["selected_time"]
     timezone_input = client.users_info(
         token=os.getenv("BOT_TOKEN"), user=context["user_id"]
     )["user"]["tz"]
+
     signup_close = (
         pytz.timezone(timezone_input)
         .localize(
@@ -584,7 +590,9 @@ def handle_new_game_submission(
     game_id = db_utils.create_new_game(
         num_rounds, round_length, signup_close
     ).inserted_primary_key[0]
+
     db_utils.generate_rounds(game_id, num_rounds, round_length, signup_close)
+
     logger.info("Game created, announcing")
 
     selected_channel = view["state"]["values"]["advertise_to_channels"][
@@ -594,17 +602,12 @@ def handle_new_game_submission(
     client.chat_postMessage(
         token=os.getenv("BOT_TOKEN"),
         channel=selected_channel,
-        text=(
-            f"<@{context['user_id']}> has started a new game of Blotto!\n\n"
-            "Raise your hands :man-raising-hand: :woman-raising-hand: "
-            f"to test your grit and game theory over the course of {num_rounds} rounds "
-            f"in a round-robin style tournament. Each round will have a submission window of "
-            f"{round_length / datetime.timedelta(hours=1)} hour(s).\n\n"
-            "Rules for each round will be announced at the start of the submission window for that round, "
-            f"and the signup period for Game {game_id} will close "
-            f"<!date^{int(signup_close.timestamp())}^{{date_short_pretty}} at {{time}}|{signup_close.strftime('%Y-%m-%d %H:%M %Z')}>.\n\n"
-            "To learn more, read about the Colonel Blotto game <https://en.wikipedia.org/wiki/Blotto_game|here> "
-            "or check out the homepage of this app. Brought to you by Jovi :smile:"
+        text=messages.new_game_announcement.format(
+            user_id=context["user_id"],
+            num_rounds=num_rounds,
+            round_length=round_length,
+            game_id=game_id,
+            game_start=int(signup_close.timestamp()),
         ),
         metadata={
             "event_type": "game_announced",
@@ -621,11 +624,8 @@ def handle_new_game_submission(
         token=os.getenv("BOT_TOKEN"),
         channel=selected_channel,
         post_at=int(signup_close.timestamp()),
-        text=(
-            f"Game {game_id} has now begun!\n\n"
-            f"<@{client.auth_test()['user_id']}> will post the rules for Round 1 shortly, and participants will have "
-            f"{round_length / datetime.timedelta(hours=1)} hour(s) to get their submission in.\n\n"
-            "Good luck! :fist:"
+        text=messages.game_start_announcement.format(
+            game_id=game_id, round_length=round_length
         ),
         metadata={
             "event_type": "game_start",
