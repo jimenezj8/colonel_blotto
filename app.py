@@ -553,6 +553,17 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         case "game_end":
             game_end_handler(client, metadata_payload, logger)
 
+        case _:
+            logger.info(metadata_type)
+            logger.info(metadata_payload)
+
+
+@app.message("")
+def ignore_messages(ack: Ack, logger: logging.Logger):
+    ack()
+
+    logger.info("Message posted somewhere, nobody cares")
+
 
 @app.view("submit_round")
 def handle_round_submission(
