@@ -1,6 +1,8 @@
 import datetime
 import os
 
+from typing import Union
+
 import sqlalchemy as sa
 
 from sqlalchemy.orm import Session
