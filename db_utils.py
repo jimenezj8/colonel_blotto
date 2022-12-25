@@ -120,12 +120,60 @@ def get_user_signups(user_id):
 def get_round(game_id: int, round_num: int):
     select = sa.select(Round).where(Round.game_id == game_id, Round.number == round_num)
 
-    with Session(Engine) as session:
+    with Session() as session:
         return session.execute(select).scalars().first()
 
 
 def get_round_length(game_id: int) -> datetime.timedelta:
     select = sa.select(Game.round_length).where(Game.id == game_id)
 
-    with Session(Engine) as session:
-        return session.execute(select).first()[0]
+    with Session() as session:
+        return session.execute(select).scalar_one()
+
+
+def cancel_game(game_id: int) -> Union[list[str], None]:
+    select = sa.select(Game.announcement_message_id).where(Game.id == game_id)
+
+    update = (
+        sa.update(Game)
+        .where(Game.id == game_id)
+        .values(canceled=True, announcement_message_id=None)
+    )
+
+    with Session() as session:
+        result = session.execute(select).scalar()
+        session.execute(update)
+
+    message_ids = cancel_rounds(game_id)
+
+    if result:
+        message_ids.append(result)
+
+    return message_ids
+
+
+def cancel_rounds(game_id: int) -> list[str]:
+    select = sa.select(Round.announcement_message_id).where(Round.game_id == game_id)
+
+    update = (
+        sa.update(Round)
+        .where(Round.game_id == game_id)
+        .values(canceled=True, announcement_message_id=None)
+    )
+
+    with Session() as session:
+        result = session.execute(select).scalars()
+        session.execute(update)
+
+    return [message_id for message_id in result if message_id]
+
+
+def update_game_announcement_message_id(game_id: int, message_id: str) -> None:
+    update = (
+        sa.update(Game)
+        .where(Game.id == game_id)
+        .values(announcement_message_id=message_id)
+    )
+
+    with Session() as session:
+        session.execute(update)
