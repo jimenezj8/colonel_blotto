@@ -59,6 +59,7 @@ def create_new_game(
         num_rounds=num_rounds,
         round_length=round_length,
         start=game_start,
+        canceled=False,
     )
 
     with Engine.connect() as con:
