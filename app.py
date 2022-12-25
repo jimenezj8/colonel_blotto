@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 @app.command("/modify_submission")
-def modify_round_submission(ack: Ack, respond: Respond, command: dict):
+def modify_submission_command_handler(ack: Ack, respond: Respond, command: dict):
     pass
 
 
