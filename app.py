@@ -9,7 +9,7 @@ from slack_bolt import Ack, App, BoltContext, Respond
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.web.client import WebClient
 
-import app_utils, blotto, db_utils, messages
+import blotto, db_utils, messages
 
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -542,24 +542,23 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
     logger.info("Received metadata, passing payload to handler")
 
     metadata_type = payload["metadata"]["event_type"]
-    metadata_payload = payload["metadata"]["event_payload"]
 
     match metadata_type:
         case "game_announced":
             logger.info("Game announcement, no action required")
 
         case "game_start":
-            game_start_handler(client, metadata_payload, logger)
+            game_start_handler(client, payload, logger)
 
         case "round_close":
-            round_close_handler(client, metadata_payload, logger)
+            round_close_handler(client, payload, logger)
 
         case "game_end":
-            game_end_handler(client, metadata_payload, logger)
+            game_end_handler(client, payload, logger)
 
         case _:
             logger.info(metadata_type)
-            logger.info(metadata_payload)
+            logger.info(payload["metadata"]["event_payload"])
 
 
 @app.message("")
