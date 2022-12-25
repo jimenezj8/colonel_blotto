@@ -5,11 +5,14 @@ from typing import Union
 
 import sqlalchemy as sa
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
 
 import blotto
 
 from models import Engine, MetaData, Game, Participant, Round, Submission, Result
+
+
+Session = sessionmaker(Engine)
 
 
 def signup_exists(user_id, game_id):
@@ -96,7 +99,7 @@ def generate_rounds(
 def get_game_start(game_id: int) -> datetime.datetime:
     select = sa.select(Game.start).where(Game.id == game_id)
 
-    with Session(Engine) as session:
+    with Session() as session:
         return session.execute(select).first()[0]
 
 
