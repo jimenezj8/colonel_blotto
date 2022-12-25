@@ -87,6 +87,7 @@ def generate_rounds(
             "end": (game_start + round_length * (round_number + 1)),
             "fields": round.fields,
             "soldiers": round.soldiers,
+            "canceled": False,
         }
         values.append(row)
 
