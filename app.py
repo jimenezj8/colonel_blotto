@@ -658,9 +658,8 @@ def handle_new_game_submission(
             game_id=game_id, round_length=round_length
         ),
         metadata={
-            "event_type": "action_trigger",
+            "event_type": "game_start",
             "event_payload": {
-                "next_event_type": "game_start",
                 "game_id": game_id,
                 "channel": selected_channel,
             },
