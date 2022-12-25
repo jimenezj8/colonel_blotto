@@ -9,10 +9,14 @@ from slack_bolt import Ack, App, BoltContext, Respond
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.web.client import WebClient
 
-import blotto, db_utils, messages
+import app_utils, blotto, db_utils, messages
+
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_MEMBER_ID = "U03LWG7NAAY"
 
 app = App(
-    token=os.getenv("BOT_TOKEN"),
+    token=BOT_TOKEN,
     signing_secret=os.getenv("SIGNING_SECRET"),
     ignoring_self_events_enabled=False,
 )
@@ -171,7 +175,7 @@ def serve_submission_modal(
             logger.info("User participating in multiple games, must select one")
             logger.info("Messaging user with game ids for active games")
             client.chat_postEphemeral(
-                token=os.getenv("BOT_TOKEN"),
+                token=BOT_TOKEN,
                 channel=command["channel_id"],
                 user=user_id,
                 text=messages.submit_round_error_multiple_active_games.format(
@@ -185,7 +189,7 @@ def serve_submission_modal(
             logger.info("User is not participating in any active games")
             logger.info("Messaging user about the status of their participation")
             client.chat_postEphemeral(
-                token=os.getenv("BOT_TOKEN"),
+                token=BOT_TOKEN,
                 channel=command["channel_id"],
                 user=user_id,
                 text=messages.submit_round_error_no_active_games,
@@ -201,7 +205,7 @@ def serve_submission_modal(
             logger.info("User is not signed up for indicated game")
             logger.info("Messaging user about the status of their participation")
             client.chat_postEphemeral(
-                token=os.getenv("BOT_TOKEN"),
+                token=BOT_TOKEN,
                 channel=command["channel_id"],
                 user=user_id,
                 text=messages.submit_round_error_invalid_game.format(
@@ -338,7 +342,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     user_id = event["user"]
 
     message = client.conversations_history(
-        token=os.getenv("BOT_TOKEN"),
+        token=BOT_TOKEN,
         channel=message_channel,
         oldest=message_ts,
         inclusive=True,
@@ -375,7 +379,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         logger.info("User already signed up for game, request denied")
 
         client.chat_postEphemeral(
-            token=os.getenv("BOT_TOKEN"),
+            token=BOT_TOKEN,
             channel=message_channel,
             text=messages.signup_request_error_duplicate.format(game_id=game_id),
             user=user_id,
@@ -389,7 +393,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         logger.info("User signup requested after game start, request denied")
 
         client.chat_postEphemeral(
-            token=os.getenv("BOT_TOKEN"),
+            token=BOT_TOKEN,
             channel=message_channel,
             text=messages.signup_request_error_game_started,
             user=user_id,
@@ -405,7 +409,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     game_start = db_utils.get_game_start(game_id)
 
     client.chat_postEphemeral(
-        token=os.getenv("BOT_TOKEN"),
+        token=BOT_TOKEN,
         channel=message_channel,
         text=messages.signup_request_success.format(
             game_id=game_id, game_start=int(game_start.timestamp())
@@ -431,7 +435,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     user_id = event["user"]
 
     message = client.conversations_history(
-        token=os.getenv("BOT_TOKEN"),
+        token=BOT_TOKEN,
         channel=message_channel,
         oldest=message_ts,
         inclusive=True,
@@ -470,7 +474,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
         logger.info("Signup record not located, cannot be removed")
 
         client.chat_postEphemeral(
-            token=os.getenv("BOT_TOKEN"),
+            token=BOT_TOKEN,
             channel=message_channel,
             text=messages.signup_remove_request_error_no_signup.format(game_id=game_id),
             user=user_id,
@@ -482,7 +486,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     logger.info("User removed from game successfully")
 
     client.chat_postEphemeral(
-        token=os.getenv("BOT_TOKEN"),
+        token=BOT_TOKEN,
         channel=message_channel,
         text=messages.signup_remove_request_success.format(game_id=game_id),
         user=user_id,
@@ -500,7 +504,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         round_length = db_utils.get_round_length(game_id)
 
         client.chat_postMessage(
-            token=os.getenv("BOT_TOKEN"),
+            token=BOT_TOKEN,
             channel=payload["announcement_channel"],
             text=messages.game_start_announcement.format(
                 game_id=game_id, round_length=str(round_length)
@@ -513,7 +517,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         round_obj = blotto.RoundLibrary.ROUND_MAP[round.id]
 
         client.chat_postMessage(
-            token=os.getenv("BOT_TOKEN"),
+            token=BOT_TOKEN,
             channel=payload["announcement_channel"],
             text=messages.round_start_announcement.format(
                 game_id=game_id,
@@ -603,9 +607,9 @@ def handle_new_game_submission(
 
     date_input = inputs["date"]["date"]["selected_date"]
     time_input = inputs["time"]["time"]["selected_time"]
-    timezone_input = client.users_info(
-        token=os.getenv("BOT_TOKEN"), user=context["user_id"]
-    )["user"]["tz"]
+    timezone_input = client.users_info(token=BOT_TOKEN, user=context["user_id"])[
+        "user"
+    ]["tz"]
 
     signup_close = (
         pytz.timezone(timezone_input)
@@ -630,7 +634,7 @@ def handle_new_game_submission(
     ]["selected_channel"]
 
     client.chat_postMessage(
-        token=os.getenv("BOT_TOKEN"),
+        token=BOT_TOKEN,
         channel=selected_channel,
         text=messages.new_game_announcement.format(
             user_id=context["user_id"],
@@ -649,10 +653,10 @@ def handle_new_game_submission(
         unfurl_links=False,
     )
 
-    logger.info("Game announced, scheduling signup close announcement")
-    client.chat_scheduleMessage(
-        token=os.getenv("BOT_TOKEN"),
-        channel=selected_channel,
+    logger.info("Game announced, scheduling signup close action")
+    response = client.chat_scheduleMessage(
+        token=BOT_TOKEN,
+        channel=BOT_MEMBER_ID,
         post_at=int(signup_close.timestamp()),
         text=messages.game_start_announcement.format(
             game_id=game_id, round_length=round_length
