@@ -548,13 +548,16 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         logger.info("Posting game announcement")
 
         round_length = db_utils.get_round_length(game_id)
-
         client.chat_postMessage(
             token=BOT_TOKEN,
-            channel=payload["announcement_channel"],
+            channel=metadata_payload["channel"],
             text=messages.game_start_announcement.format(
-                game_id=game_id, round_length=str(round_length)
+                game_id=game_id, round_length=round_length
             ),
+            metadata={
+                "event_type": "round_start",
+                "event_payload": {"game_id": game_id, "round_number": 1},
+            },
         )
 
         logger.info("Posting rules for Round 1")
