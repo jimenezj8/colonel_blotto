@@ -560,10 +560,19 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             },
         )
 
-        logger.info("Posting rules for Round 1")
+    def round_start_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        metadata = payload["metadata"]
+        metadata_payload = metadata["event_payload"]
 
-        round = db_utils.get_round(game_id, 1)
-        round_obj = blotto.RoundLibrary.ROUND_MAP[round.id]
+        game_id = metadata_payload["game_id"]
+        round_num = metadata_payload["round_number"]
+
+        logger.info(f"Round {round_num} starting, posting rules")
+
+        round = db_utils.get_round(game_id, round_num)
+        round_obj = blotto.RoundLibrary.load_round(
+            round.id, round.fields, round.soldiers
+        )
 
         client.chat_postMessage(
             token=BOT_TOKEN,
@@ -576,10 +585,70 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             ),
         )
 
-    def round_close_handler(client: WebClient, payload: dict, logger: logging.Logger):
-        logger.info("Round close, posting next round start")
+        logger.info(f"Round {round_num} rules posted, scheduling end of round")
+
+        client.chat_scheduleMessage(
+            token=BOT_TOKEN,
+            channel=BOT_MEMBER_ID,
+            post_at=int(round.end.timestamp()),
+            text="next",
+            metadata={
+                "event_type": "round_close",
+                "event_payload": {"game_id": game_id, "round_number": round_num},
+            },
+        )
+
+    def round_end_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        metadata = payload["metadata"]
+        metadata_payload = metadata["event_payload"]
+
+        game_id = metadata_payload["game_id"]
+        round_num = metadata_payload["round_num"]
+
+        logger.info(f"Round {round_num} has ended")
         logger.info("Calculating round results")
-        logger.info("Updating leaderboard")
+
+        round = db_utils.get_round(game_id, round_num)
+        round_obj = blotto.RoundLibrary.load_round(
+            round.id, round.fields, round.soldiers
+        )
+
+        # TODO: implement method on Round Object to update database with results for round
+        # round_obj.calculate_results(game_id, round_num)
+
+        # TODO: fetch top three results for the round
+        scores = db_utils.get_results(game_id, round_num)
+
+        message_params = {
+            "token": BOT_TOKEN,
+            "channel": payload["channel_id"],
+            "text": messages.round_end_announcement.format(
+                game_id=game_id,
+                round_number=round_num,
+                first=scores[0].user_id,
+                first_score=scores[0].score,
+                second=scores[1].user_id,
+                second_score=scores[1].score,
+                third=scores[2].user_id,
+                third_score=scores[2].score,
+            ),
+        }
+
+        next_round = db_utils.get_round(game_id, round_num + 1)
+
+        if not next_round:
+            message_params["metadata"] = {
+                "event_type": "game_end",
+                "event_payload": {"game_id": game_id},
+            }
+
+        else:
+            message_params["metadata"] = {
+                "event_type": "round_start",
+                "event_payload": {"game_id": game_id, "round_number": round_num + 1},
+            }
+
+        client.chat_postMessage(**message_params)
 
     def game_end_handler(client: WebClient, payload: dict, logger: logging.Logger):
         logger.info("Game end, posting announcement")
@@ -599,8 +668,11 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         case "game_start":
             game_start_handler(client, payload, logger)
 
-        case "round_close":
-            round_close_handler(client, payload, logger)
+        case "round_start":
+            round_start_handler(client, payload, logger)
+
+        case "round_end":
+            round_end_handler(client, payload, logger)
 
         case "game_end":
             game_end_handler(client, payload, logger)

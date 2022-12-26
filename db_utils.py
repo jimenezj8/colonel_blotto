@@ -118,7 +118,7 @@ def get_user_signups(user_id):
     return participating_in
 
 
-def get_round(game_id: int, round_num: int):
+def get_round(game_id: int, round_num: int) -> Round | None:
     select = sa.select(Round).where(Round.game_id == game_id, Round.number == round_num)
 
     with Session() as session:
@@ -132,7 +132,7 @@ def get_round_length(game_id: int) -> datetime.timedelta:
         return session.execute(select).scalar_one()
 
 
-def cancel_game(game_id: int) -> Union[list[str], None]:
+def cancel_game(game_id: int) -> None:
     update = sa.update(Game).where(Game.id == game_id).values(canceled=True)
 
     with Session() as session:
@@ -141,7 +141,7 @@ def cancel_game(game_id: int) -> Union[list[str], None]:
     cancel_rounds(game_id)
 
 
-def cancel_rounds(game_id: int) -> list[str]:
+def cancel_rounds(game_id: int) -> None:
     update = sa.update(Round).where(Round.game_id == game_id).values(canceled=True)
 
     with Session() as session:
@@ -160,3 +160,14 @@ def get_game(game_id: int) -> Game:
 
     with Session() as session:
         return session.execute(select).scalar_one()
+
+
+def get_results(game_id: int, round_num: int) -> list[Result]:
+    select = (
+        sa.select(Result)
+        .where(Result.game_id == game_id, Result.round_number == round_num)
+        .order_by(Result.rank.asc())
+    )
+
+    with Session() as session:
+        return session.execute(select).scalars().all()
