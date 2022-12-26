@@ -1,13 +1,18 @@
 import datetime
 import os
 
+from typing import Union
+
 import sqlalchemy as sa
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
 
 import blotto
 
 from models import Engine, MetaData, Game, Participant, Round, Submission, Result
+
+
+Session = sessionmaker(Engine)
 
 
 def signup_exists(user_id, game_id):
@@ -54,6 +59,7 @@ def create_new_game(
         num_rounds=num_rounds,
         round_length=round_length,
         start=game_start,
+        canceled=False,
     )
 
     with Engine.connect() as con:
@@ -81,6 +87,7 @@ def generate_rounds(
             "end": (game_start + round_length * (round_number + 1)),
             "fields": round.fields,
             "soldiers": round.soldiers,
+            "canceled": False,
         }
         values.append(row)
 
@@ -94,7 +101,7 @@ def generate_rounds(
 def get_game_start(game_id: int) -> datetime.datetime:
     select = sa.select(Game.start).where(Game.id == game_id)
 
-    with Session(Engine) as session:
+    with Session() as session:
         return session.execute(select).first()[0]
 
 
@@ -114,12 +121,42 @@ def get_user_signups(user_id):
 def get_round(game_id: int, round_num: int):
     select = sa.select(Round).where(Round.game_id == game_id, Round.number == round_num)
 
-    with Session(Engine) as session:
+    with Session() as session:
         return session.execute(select).scalars().first()
 
 
 def get_round_length(game_id: int) -> datetime.timedelta:
     select = sa.select(Game.round_length).where(Game.id == game_id)
 
-    with Session(Engine) as session:
-        return session.execute(select).first()[0]
+    with Session() as session:
+        return session.execute(select).scalar_one()
+
+
+def cancel_game(game_id: int) -> Union[list[str], None]:
+    update = sa.update(Game).where(Game.id == game_id).values(canceled=True)
+
+    with Session() as session:
+        session.execute(update)
+
+    cancel_rounds(game_id)
+
+
+def cancel_rounds(game_id: int) -> list[str]:
+    update = sa.update(Round).where(Round.game_id == game_id).values(canceled=True)
+
+    with Session() as session:
+        session.execute(update)
+
+
+def get_participants(game_id: int) -> list:
+    select = sa.select(Participant).where(Participant.game_id == game_id)
+
+    with Session() as session:
+        return session.execute(select).scalars().all()
+
+
+def get_game(game_id: int) -> Game:
+    select = sa.select(Game).where(Game.id == game_id)
+
+    with Session() as session:
+        return session.execute(select).scalar_one()

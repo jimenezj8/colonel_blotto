@@ -15,6 +15,7 @@ class Game(Base):
     round_length = sa.Column(sa.Interval, nullable=False)
     num_rounds = sa.Column(sa.Integer, nullable=False)
     start = sa.Column(sa.DateTime(timezone=True), nullable=False)
+    canceled = sa.Column(sa.Boolean, nullable=False)
 
     def __repr__(self):
         return f"Game(id={self.id!r}, round_length={self.round_length!r}, num_rounds={self.num_rounds!r}, start={self.start!r})"
@@ -45,6 +46,7 @@ class Round(Base):
     end = sa.Column(sa.DateTime, nullable=False)
     fields = sa.Column(sa.Integer, nullable=False)
     soldiers = sa.Column(sa.Integer, nullable=False)
+    canceled = sa.Column(sa.Boolean, nullable=False)
 
     __tableargs__ = (
         sa.PrimaryKeyConstraint(game_id, number, name="round_pk"),
