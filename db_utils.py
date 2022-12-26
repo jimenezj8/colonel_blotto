@@ -133,11 +133,7 @@ def get_round_length(game_id: int) -> datetime.timedelta:
 
 
 def cancel_game(game_id: int) -> Union[list[str], None]:
-    update = (
-        sa.update(Game)
-        .where(Game.id == game_id)
-        .values(canceled=True, announcement_message_id=None)
-    )
+    update = sa.update(Game).where(Game.id == game_id).values(canceled=True)
 
     with Session() as session:
         session.execute(update)
@@ -146,11 +142,7 @@ def cancel_game(game_id: int) -> Union[list[str], None]:
 
 
 def cancel_rounds(game_id: int) -> list[str]:
-    update = (
-        sa.update(Round)
-        .where(Round.game_id == game_id)
-        .values(canceled=True, announcement_message_id=None)
-    )
+    update = sa.update(Round).where(Round.game_id == game_id).values(canceled=True)
 
     with Session() as session:
         session.execute(update)
@@ -160,4 +152,4 @@ def get_participants(game_id: int) -> list:
     select = sa.select(Participant).where(Participant.game_id == game_id)
 
     with Session() as session:
-        return session.execute(select).scalars()
+        return session.execute(select).scalars().all()

@@ -496,9 +496,18 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 @app.event("message_metadata_posted")
 def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Logger):
     def game_start_handler(client: WebClient, payload: dict, logger: logging.Logger):
-        game_id = payload["game_id"]
+        metadata = payload["metadata"]
+        metadata_payload = metadata["event_payload"]
+
+        game_id = metadata_payload["game_id"]
 
         logger.info(f"Game {game_id} starting")
+        if len(db_utils.get_participants(game_id)) < 2:
+            logger.info("Not enough participants, canceling game")
+            db_utils.cancel_game(game_id)
+            logger.info("Game canceled successfully")
+            return
+
         logger.info("Posting game announcement")
 
         round_length = db_utils.get_round_length(game_id)
@@ -518,7 +527,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
 
         client.chat_postMessage(
             token=BOT_TOKEN,
-            channel=payload["announcement_channel"],
+            channel=metadata_payload["channel"],
             text=messages.round_start_announcement.format(
                 game_id=game_id,
                 round_num=round.number,
