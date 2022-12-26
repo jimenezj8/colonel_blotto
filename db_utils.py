@@ -133,8 +133,6 @@ def get_round_length(game_id: int) -> datetime.timedelta:
 
 
 def cancel_game(game_id: int) -> Union[list[str], None]:
-    select = sa.select(Game.announcement_message_id).where(Game.id == game_id)
-
     update = (
         sa.update(Game)
         .where(Game.id == game_id)
@@ -142,20 +140,12 @@ def cancel_game(game_id: int) -> Union[list[str], None]:
     )
 
     with Session() as session:
-        result = session.execute(select).scalar()
         session.execute(update)
 
-    message_ids = cancel_rounds(game_id)
-
-    if result:
-        message_ids.append(result)
-
-    return message_ids
+    cancel_rounds(game_id)
 
 
 def cancel_rounds(game_id: int) -> list[str]:
-    select = sa.select(Round.announcement_message_id).where(Round.game_id == game_id)
-
     update = (
         sa.update(Round)
         .where(Round.game_id == game_id)
@@ -163,18 +153,11 @@ def cancel_rounds(game_id: int) -> list[str]:
     )
 
     with Session() as session:
-        result = session.execute(select).scalars()
         session.execute(update)
 
-    return [message_id for message_id in result if message_id]
 
-
-def update_game_announcement_message_id(game_id: int, message_id: str) -> None:
-    update = (
-        sa.update(Game)
-        .where(Game.id == game_id)
-        .values(announcement_message_id=message_id)
-    )
+def get_participants(game_id: int) -> list:
+    select = sa.select(Participant).where(Participant.game_id == game_id)
 
     with Session() as session:
-        session.execute(update)
+        return session.execute(select).scalars()

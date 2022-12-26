@@ -653,7 +653,7 @@ def handle_new_game_submission(
     )
 
     logger.info("Game announced, scheduling signup close action")
-    response = client.chat_scheduleMessage(
+    client.chat_scheduleMessage(
         token=BOT_TOKEN,
         channel=BOT_MEMBER_ID,
         post_at=int(signup_close.timestamp()),
@@ -668,10 +668,6 @@ def handle_new_game_submission(
             },
         },
     )
-
-    logger.info("Saving scheduled message ID")
-    announcement_message_id = response["scheduled_message_id"]
-    db_utils.update_game_announcement_message_id(game_id, announcement_message_id)
 
     logger.info("Success, new game flow complete")
 
