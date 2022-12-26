@@ -153,3 +153,10 @@ def get_participants(game_id: int) -> list:
 
     with Session() as session:
         return session.execute(select).scalars().all()
+
+
+def get_game(game_id: int) -> Game:
+    select = sa.select(Game).where(Game.id == game_id)
+
+    with Session() as session:
+        return session.execute(select).scalar_one()

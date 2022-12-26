@@ -24,6 +24,43 @@ app = App(
 logging.basicConfig(level=logging.DEBUG)
 
 
+@app.command("/cancel_game")
+def cancel_game_command_handler(
+    ack: Ack, client: WebClient, command: dict, logger: logging.Logger
+):
+    ack()
+
+    user_id = command["user_id"]
+    response_channel = command["channel_id"]
+    game_id = int(command["text"])
+
+    game = db_utils.get_game(game_id)
+    if pytz.utc.localize(datetime.datetime.utcnow()) >= game.start:
+        logger.info("Game has already begun, letting user know")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            user=user_id,
+            channel=response_channel,
+            text="The game you've requested to cancel has already begun, sorry.",
+        )
+
+    elif game.canceled:
+        logger.info("Game has already been canceled, letting user know")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            user=user_id,
+            channel=response_channel,
+            text="The game you've requested to cancel was already canceled.",
+        )
+
+    logger.info(f"Canceling game {game_id} by request from {user_id}")
+    db_utils.cancel_game(game_id)
+
+    logger.info("Game canceled successfully")
+
+
 @app.command("/modify_submission")
 def modify_submission_command_handler(ack: Ack, respond: Respond, command: dict):
     pass
