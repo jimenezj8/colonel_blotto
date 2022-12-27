@@ -697,10 +697,6 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         case "game_end":
             game_end_handler(client, payload, logger)
 
-        case _:
-            logger.info(metadata_type)
-            logger.info(payload["metadata"]["event_payload"])
-
 
 @app.message("")
 def ignore_messages(ack: Ack, logger: logging.Logger):
