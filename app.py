@@ -2,15 +2,16 @@ import datetime
 import logging
 import os
 import sys
+import time
 
 import pytz
-
 from slack_bolt import Ack, App, BoltContext, Respond
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.web.client import WebClient
 
-import blotto, db_utils, messages
-
+import blotto
+import db_utils
+import messages
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BOT_MEMBER_ID = "U03LWG7NAAY"
@@ -547,24 +548,36 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
 
         logger.info("Posting game announcement")
 
-        round_length = db_utils.get_round_length(game_id)
-
+        game = db_utils.get_game(game_id)
         client.chat_postMessage(
             token=BOT_TOKEN,
-            channel=payload["announcement_channel"],
+            channel=metadata_payload["channel_id"],
             text=messages.game_start_announcement.format(
-                game_id=game_id, round_length=str(round_length)
+                game_id=game_id, round_length=game.round_length
             ),
+            metadata={
+                "event_type": "round_start",
+                "event_payload": {"game_id": game_id, "round_number": 1},
+            },
         )
 
-        logger.info("Posting rules for Round 1")
+    def round_start_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        metadata = payload["metadata"]
+        metadata_payload = metadata["event_payload"]
 
-        round = db_utils.get_round(game_id, 1)
-        round_obj = blotto.RoundLibrary.ROUND_MAP[round.id]
+        game_id = metadata_payload["game_id"]
+        round_num = metadata_payload["round_number"]
+
+        logger.info(f"Round {round_num} starting, posting rules")
+
+        round = db_utils.get_round(game_id, round_num)
+        round_obj = blotto.RoundLibrary.load_round(
+            round.id, round.fields, round.soldiers
+        )
 
         client.chat_postMessage(
             token=BOT_TOKEN,
-            channel=metadata_payload["channel"],
+            channel=payload["channel_id"],
             text=messages.round_start_announcement.format(
                 game_id=game_id,
                 round_num=round.number,
@@ -572,18 +585,97 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
                 round_rules=round_obj.RULES,
             ),
         )
+        time.sleep(1)
 
-    def round_close_handler(client: WebClient, payload: dict, logger: logging.Logger):
-        logger.info("Round close, posting next round start")
+        logger.info(f"Round {round_num} rules posted, scheduling end of round")
+
+        client.chat_scheduleMessage(
+            token=BOT_TOKEN,
+            channel=BOT_MEMBER_ID,
+            post_at=int(round.end.timestamp()),
+            text="next",
+            metadata={
+                "event_type": "round_end",
+                "event_payload": {
+                    "game_id": game_id,
+                    "round_number": round_num,
+                    "channel_id": payload["channel_id"],
+                },
+            },
+        )
+
+    def round_end_handler(client: WebClient, payload: dict, logger: logging.Logger):
+        metadata = payload["metadata"]
+        metadata_payload = metadata["event_payload"]
+
+        game_id = metadata_payload["game_id"]
+        round_num = metadata_payload["round_number"]
+
+        logger.info(f"Round {round_num} has ended")
         logger.info("Calculating round results")
-        logger.info("Updating leaderboard")
+
+        round = db_utils.get_round(game_id, round_num)
+        round_obj = blotto.RoundLibrary.load_round(
+            round.id, round.fields, round.soldiers, game_id
+        )
+
+        round_obj.update_results()
+
+        scores = db_utils.get_round_results(game_id, round_num)
+
+        message_params = {
+            "token": BOT_TOKEN,
+            "channel": metadata_payload["channel_id"],
+            "text": messages.round_end_announcement.format(
+                game_id=game_id,
+                round_num=round_num,
+                first=scores[0].user_id,
+                first_score=scores[0].score,
+                second=scores[1].user_id,
+                second_score=scores[1].score,
+                third=scores[2].user_id,
+                third_score=scores[2].score,
+            ),
+        }
+
+        next_round = db_utils.get_round(game_id, round_num + 1)
+
+        if not next_round:
+            message_params["metadata"] = {
+                "event_type": "game_end",
+                "event_payload": {"game_id": game_id},
+            }
+
+        else:
+            message_params["metadata"] = {
+                "event_type": "round_start",
+                "event_payload": {"game_id": game_id, "round_number": round_num + 1},
+            }
+
+        client.chat_postMessage(**message_params)
 
     def game_end_handler(client: WebClient, payload: dict, logger: logging.Logger):
-        logger.info("Game end, posting announcement")
-        logger.info("Calculating round results")
+        metadata = payload["metadata"]
+        metadata_payload = metadata["event_payload"]
+
+        game_id = metadata_payload["game_id"]
+
+        logger.info(f"Game {game_id} ended")
         logger.info("Calculating game results")
-        logger.info("Updating leaderboard")
+
+        blotto.update_game_results(game_id)
+
         logger.info("Posting game winner announcement")
+
+        scores = db_utils.get_game_results(game_id)
+        winner = scores[0]
+        client.chat_postMessage(
+            token=BOT_TOKEN,
+            channel=payload["channel_id"],
+            text=messages.game_end_announcement.format(
+                game_id=game_id, winner=winner.user_id, winner_score=winner.score
+            ),
+        )
 
     logger.info("Received metadata, passing payload to handler")
 
@@ -596,15 +688,14 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         case "game_start":
             game_start_handler(client, payload, logger)
 
-        case "round_close":
-            round_close_handler(client, payload, logger)
+        case "round_start":
+            round_start_handler(client, payload, logger)
+
+        case "round_end":
+            round_end_handler(client, payload, logger)
 
         case "game_end":
             game_end_handler(client, payload, logger)
-
-        case _:
-            logger.info(metadata_type)
-            logger.info(payload["metadata"]["event_payload"])
 
 
 @app.message("")
@@ -666,11 +757,7 @@ def handle_new_game_submission(
 
     logger.info("Valid params, creating game instance")
 
-    game_id = db_utils.create_new_game(
-        num_rounds, round_length, signup_close
-    ).inserted_primary_key[0]
-
-    db_utils.generate_rounds(game_id, num_rounds, round_length, signup_close)
+    game_id = blotto.GameFactory.new_game()
 
     logger.info("Game created, announcing")
 
@@ -692,25 +779,23 @@ def handle_new_game_submission(
             "event_type": "game_announced",
             "event_payload": {
                 "game_id": game_id,
-                "announcement_channel": selected_channel,
             },
         },
         unfurl_links=False,
     )
+    time.sleep(1)
 
     logger.info("Game announced, scheduling signup close action")
     client.chat_scheduleMessage(
         token=BOT_TOKEN,
         channel=BOT_MEMBER_ID,
         post_at=int(signup_close.timestamp()),
-        text=messages.game_start_announcement.format(
-            game_id=game_id, round_length=round_length
-        ),
+        text="game",
         metadata={
             "event_type": "game_start",
             "event_payload": {
                 "game_id": game_id,
-                "channel": selected_channel,
+                "channel_id": selected_channel,
             },
         },
     )

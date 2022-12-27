@@ -1,17 +1,46 @@
-from typing import Any, Union, List, Dict
-import random
+import datetime
 import logging
+import random
+
+import db_utils
+
 
 logging.basicConfig(level=logging.INFO)
 
 
 class BlottoRound:
-    def __init__(self, fields: int, soldiers: int):
-        if fields is None or soldiers is None:
-            raise ValueError("Args [fields, soldiers] must not be None")
+    def __init__(
+        self,
+        fields: int | None,
+        soldiers: int | None,
+        field_bounds: tuple[int],
+        soldier_bounds: tuple[int],
+        game_id: int | None = None,
+    ):
+        self._field_bounds = field_bounds
+        self._soldier_bounds = soldier_bounds
+
+        if fields is None and soldiers is None:
+            fields = self.random_fields()
+            soldiers = self.random_fields()
+
+        elif fields is not None and soldiers is not None:
+            pass
+
+        else:
+            raise ValueError(
+                "If one of [fields, soldiers] is provided, both must be provided."
+            )
 
         self._fields = fields
         self._soldiers = soldiers
+        self._game_id = game_id
+
+    def random_fields(self) -> int:
+        return random.randint(*self.field_bounds)
+
+    def random_soldiers(self) -> int:
+        return random.randint(*self.soldier_bounds)
 
     @property
     def fields(self):
@@ -20,6 +49,18 @@ class BlottoRound:
     @property
     def soldiers(self):
         return self._soldiers
+
+    @property
+    def game_id(self):
+        return self._game_id
+
+    @property
+    def field_bounds(self):
+        return self._field_bounds
+
+    @property
+    def soldier_bounds(self):
+        return self._soldier_bounds
 
 
 class DecreasingSoldiers(BlottoRound):
@@ -30,36 +71,30 @@ class DecreasingSoldiers(BlottoRound):
     ID = 1
     DIFFICULTY = 1
     RULES = """
-    All submissions must exhibit a decreasing number of soldiers in each next field.
-    That is, if in Field 1, you wish to allocate 10 soldiers, Field 2 may have no more than 10 soldiers.
-
-    Scoring will be as follows:
-    * In each field, score will be equal to:
-        * The difference in soldiers for the person with more soldiers
-        * 0 for the person with less soldiers
-    """
+> All submissions must exhibit a decreasing number of soldiers in each next field.
+> That is, if in Field 1, you wish to allocate 10 soldiers, Field 2 may have no more than 10 soldiers.
+> 
+> Scoring will be as follows:
+> * In each field, score will be equal to:
+>     * The difference in soldiers for the person with more soldiers
+>     * 0 for the person with less soldiers
+"""
 
     def __init__(
-        self, fields: Union[int, None] = None, soldiers: Union[int, None] = None
+        self,
+        fields: int | None = None,
+        soldiers: int | None = None,
+        game_id: int | None = None,
     ):
         """
         This class can be used to "load" an existing configuration or generate a new one.
         """
-        if fields is None and soldiers is None:
-            fields = random.randint(3, 7)
-            soldiers = random.randint(6, 20) * 5
+        field_bounds = (3, 7)
+        soldier_bounds = (30, 100)
 
-        elif fields is not None and soldiers is not None:
-            pass
+        super().__init__(fields, soldiers, field_bounds, soldier_bounds, game_id)
 
-        else:
-            raise ValueError(
-                "If one of [fields, soldiers] is provided, both must be provided."
-            )
-
-        super().__init__(fields, soldiers)
-
-    def check_field_rules(self, submission: List[int]):
+    def check_field_rules(self, submission: list[int]):
         """
         This round enforces that fields submitted must have non-increasing numbers of soldiers in fields.
 
@@ -86,41 +121,75 @@ class DecreasingSoldiers(BlottoRound):
                         f"Error on Field {field}: decreasing soldiers criteria not met"
                     )
 
-    def score_opponents(
-        self,
-        submission_one: Dict[str, Union[str, List]],
-        submission_two: Dict[str, Union[str, List]],
-    ):
+    def update_results(self):
         """
-        Takes two valid user submissions as dicts. Positional arguments because order is unimportant.
+        Must be an instance of a round that is tied to a game instance.
 
-        Submissions should be a dict like {'user_id': user_id, 'submission': list[field1, field2, ...]}
-
-        Returns the same dicts with the score as an additional key-value pair.
+        Will pull submissions from the database, calculate each user's score, and push the scores to the round_result table.
         """
-        score_one = 0
-        score_two = 0
-        for i in range(self.fields):
-            soldiers_one = submission_one["submission"][i]
-            soldiers_two = submission_two["submission"][i]
-
-            score_one += max(0, soldiers_one - soldiers_two)
-            score_two += max(0, soldiers_two - soldiers_one)
-
-        submission_one["score"] = score_one
-        submission_two["score"] = score_two
-
-        return submission_one, submission_two
+        submissions = db_utils.get_submissions_dataframe(self.game_id)
 
 
 class RoundLibrary:
-    # [id]: [round object reference] pairs
     ROUND_MAP = {DecreasingSoldiers.ID: DecreasingSoldiers}
 
     @classmethod
-    def load_round(cls, round_id: int, fields: int, soldiers: int):
-        return cls.ROUND_MAP[round_id](fields, soldiers)
+    def load_round(
+        cls, round_id: int, fields: int, soldiers: int, game_id: int | None = None
+    ):
+        """
+        Must provide a round ID, number of fields, and soldiers.
+
+        Game ID is optional, and useful for object instances that will be used to calculate results.
+        """
+        return cls.ROUND_MAP[round_id](fields, soldiers, game_id)
 
     @classmethod
     def get_random(cls):
         return random.choice(list(cls.ROUND_MAP.values()))()
+
+
+class GameFactory:
+    @classmethod
+    def new_game(
+        num_rounds: int,
+        round_length: datetime.timedelta,
+        start: datetime.datetime,
+    ) -> int:
+        game_id = db_utils.create_new_game(num_rounds, round_length, start)
+
+        new_rounds = []
+        for round_num in range(num_rounds):
+            new_round = RoundLibrary.get_random()
+            new_rounds.append(
+                {
+                    "id": new_round.ID,
+                    "game_id": game_id,
+                    "number": round_num + 1,
+                    "start": start + round_length * round_num,
+                    "end": start + round_length * (round_num + 1),
+                    "fields": new_round.fields,
+                    "soldiers": new_round.soldiers,
+                    "canceled": False,
+                }
+            )
+
+        db_utils.create_new_rounds(new_rounds)
+
+        return game_id
+
+
+def update_game_results(game_id: int) -> None:
+    round_results = db_utils.get_round_results_dataframe(game_id)
+
+    game_results = round_results.groupby(by="user_id", as_index=False).agg(
+        {"score": "mean"}
+    )
+    game_results["game_id"] = game_id
+    game_results.sort_values(by="score", ascending=False, inplace=True)
+    game_results = (
+        game_results.reset_index(drop=True)
+        .reset_index(drop=False)
+        .rename(columns={"index": "rank"})
+    )
+    game_results.to_sql("game_result", Engine, if_exists="append")

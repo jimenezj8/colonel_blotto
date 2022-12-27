@@ -3,7 +3,6 @@ import os
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
 
-
 Engine = sa.create_engine(os.getenv("BLOTTO_DB"))
 Base = orm.declarative_base(bind=Engine)
 
@@ -24,11 +23,11 @@ class Game(Base):
 class Participant(Base):
     __tablename__ = "participant"
 
-    game_id = sa.Column(sa.ForeignKey("game.id", ondelete="CASCADE"), nullable=False)
+    game_id = sa.Column(sa.ForeignKey("game.id"), nullable=False)
     user_id = sa.Column(sa.Text, nullable=False)
 
-    __tableargs__ = (
-        sa.PrimaryKeyConstraint(game_id, user_id, name="signup"),
+    __table_args__ = (
+        sa.PrimaryKeyConstraint("game_id", "user_id", name="participant_pk"),
         {},
     )
 
@@ -40,7 +39,7 @@ class Round(Base):
     __tablename__ = "round"
 
     id = sa.Column(sa.Integer, nullable=False)
-    game_id = sa.Column(sa.ForeignKey("game.id", ondelete="CASCADE"), nullable=False)
+    game_id = sa.Column(sa.ForeignKey("game.id"), nullable=False)
     number = sa.Column(sa.Integer, nullable=False)
     start = sa.Column(sa.DateTime, nullable=False)
     end = sa.Column(sa.DateTime, nullable=False)
@@ -48,8 +47,8 @@ class Round(Base):
     soldiers = sa.Column(sa.Integer, nullable=False)
     canceled = sa.Column(sa.Boolean, nullable=False)
 
-    __tableargs__ = (
-        sa.PrimaryKeyConstraint(game_id, number, name="round_pk"),
+    __table_args__ = (
+        sa.PrimaryKeyConstraint("game_id", "number", name="round_pk"),
         {},
     )
 
@@ -60,23 +59,57 @@ class Round(Base):
 class Submission(Base):
     __tablename__ = "submission"
 
-    id = sa.Column(sa.Integer, primary_key=True)
-    game_id = sa.Column(sa.ForeignKey("game.id", ondelete="CASCADE"), nullable=False)
-    user_id = sa.Column(sa.Text, nullable=False)
-    round_number = sa.Column(sa.Integer, nullable=False)
+    game_id = sa.Column(nullable=False)
+    round_number = sa.Column(nullable=False)
+    user_id = sa.Column(nullable=False)
     field_number = sa.Column(sa.Integer, nullable=False)
     num_soldiers = sa.Column(sa.Integer, nullable=False)
 
+    __table_args__ = (
+        sa.PrimaryKeyConstraint(
+            "game_id", "round_number", "user_id", "field_number", name="submission_pk"
+        ),
+        sa.ForeignKeyConstraint(
+            columns=["game_id", "user_id"],
+            refcolumns=["participant.game_id", "participant.user_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            columns=["game_id", "round_number"],
+            refcolumns=["round.game_id", "round.number"],
+        ),
+    )
 
-class Result(Base):
-    __tablename__ = "result"
 
-    # TODO: primarykeyconstraint on foreignkey signup from participant table
-    game_id = sa.Column(sa.ForeignKey("game.id", ondelete="CASCADE"), primary_key=True)
+class RoundResult(Base):
+    __tablename__ = "round_result"
+
+    game_id = sa.Column(sa.ForeignKey("game.id"))
     user_id = sa.Column(sa.Text, nullable=False)
     round_number = sa.Column(sa.Integer, nullable=False)
     score = sa.Column(sa.Float, nullable=True)
     rank = sa.Column(sa.Integer, nullable=True)
+
+    __table_args__ = (
+        sa.PrimaryKeyConstraint("game_id", "round_number", name="roundresult_pk"),
+        {},
+    )
+
+
+class GameResult(Base):
+    __tablename__ = "game_result"
+
+    game_id = sa.Column(nullable=False)
+    user_id = sa.Column(nullable=False)
+    score = sa.Column(sa.Float, nullable=False)
+    rank = sa.Column(sa.Integer, nullable=False)
+
+    __table_args__ = (
+        sa.PrimaryKeyConstraint("game_id", "user_id", name="gameresult_pk"),
+        sa.ForeignKeyConstraint(
+            columns=["game_id", "user_id"],
+            refcolumns=["participant.game_id", "participant.user_id"],
+        ),
+    )
 
 
 MetaData = Base.metadata

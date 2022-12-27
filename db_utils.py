@@ -1,16 +1,20 @@
 import datetime
-import os
 
-from typing import Union
-
+import pandas as pd
 import sqlalchemy as sa
-
 from sqlalchemy.orm import sessionmaker
 
 import blotto
-
-from models import Engine, MetaData, Game, Participant, Round, Submission, Result
-
+from models import (
+    Engine,
+    Game,
+    GameResult,
+    MetaData,
+    Participant,
+    Round,
+    RoundResult,
+    Submission,
+)
 
 Session = sessionmaker(Engine)
 
@@ -52,7 +56,7 @@ def remove_user_from_game(user_id, game_id):
 
 def create_new_game(
     num_rounds: int, round_length: datetime.timedelta, game_start: datetime.datetime
-):
+) -> int:
     games = MetaData.tables["game"]
 
     insert = games.insert().values(
@@ -65,37 +69,14 @@ def create_new_game(
     with Engine.connect() as con:
         result = con.execute(insert)
 
-    return result
+    return result.inserted_primary_key[0]
 
 
-def generate_rounds(
-    game_id: int,
-    num_rounds: int,
-    round_length: datetime.timedelta,
-    game_start: datetime.datetime,
-):
-    rounds = MetaData.tables["round"]
-
-    values = []
-    for round_number in range(num_rounds):
-        round = blotto.RoundLibrary.get_random()
-        row = {
-            "id": round.ID,
-            "game_id": game_id,
-            "number": round_number + 1,
-            "start": (game_start + round_length * round_number),
-            "end": (game_start + round_length * (round_number + 1)),
-            "fields": round.fields,
-            "soldiers": round.soldiers,
-            "canceled": False,
-        }
-        values.append(row)
-
-    insert = rounds.insert().values(values)
-    with Engine.connect() as con:
-        result = con.execute(insert)
-
-    return result
+def create_new_rounds(rounds: list[dict]) -> None:
+    rounds = [Round(**round) for round in rounds]
+    with Session() as session:
+        session.add_all(rounds)
+        session.commit()
 
 
 def get_game_start(game_id: int) -> datetime.datetime:
@@ -118,7 +99,7 @@ def get_user_signups(user_id):
     return participating_in
 
 
-def get_round(game_id: int, round_num: int):
+def get_round(game_id: int, round_num: int) -> Round | None:
     select = sa.select(Round).where(Round.game_id == game_id, Round.number == round_num)
 
     with Session() as session:
@@ -132,7 +113,7 @@ def get_round_length(game_id: int) -> datetime.timedelta:
         return session.execute(select).scalar_one()
 
 
-def cancel_game(game_id: int) -> Union[list[str], None]:
+def cancel_game(game_id: int) -> None:
     update = sa.update(Game).where(Game.id == game_id).values(canceled=True)
 
     with Session() as session:
@@ -141,7 +122,7 @@ def cancel_game(game_id: int) -> Union[list[str], None]:
     cancel_rounds(game_id)
 
 
-def cancel_rounds(game_id: int) -> list[str]:
+def cancel_rounds(game_id: int) -> None:
     update = sa.update(Round).where(Round.game_id == game_id).values(canceled=True)
 
     with Session() as session:
@@ -160,3 +141,37 @@ def get_game(game_id: int) -> Game:
 
     with Session() as session:
         return session.execute(select).scalar_one()
+
+
+def get_round_results(game_id: int, round_num: int) -> list[RoundResult]:
+    select = (
+        sa.select(RoundResult)
+        .where(RoundResult.game_id == game_id, RoundResult.round_number == round_num)
+        .order_by(RoundResult.rank.asc())
+    )
+
+    with Session() as session:
+        return session.execute(select).scalars().all()
+
+
+def get_game_results(game_id: int) -> list[GameResult]:
+    select = (
+        sa.select(GameResult)
+        .where(GameResult.game_id == game_id)
+        .order_by(GameResult.rank.asc())
+    )
+
+    with Session() as session:
+        return session.execute(select).scalars().all()
+
+
+def get_submissions_dataframe(game_id: int) -> pd.DataFrame:
+    select = sa.select(Submission).where(Submission.game_id == game_id)
+
+    return pd.read_sql(str(select), Engine)
+
+
+def get_round_results_dataframe(game_id: int) -> pd.DataFrame:
+    select = sa.select(RoundResult).where(RoundResult.game_id == game_id)
+
+    return pd.read_sql(str(select), Engine)
