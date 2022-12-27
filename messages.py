@@ -31,7 +31,7 @@ Sorry, the game you signed up for has already begun. Try starting a new game!
 """
 
 signup_request_success = """
-You signed up for Blotto game {game_id}! Round 1 will begin <!date^{game_start}^{{date_short_pretty}} at {{time}}>.
+You signed up for Blotto game {game_id}! Round 1 will begin <!date^{game_start}^{{date_short_pretty}} at {{time}}| >.
 """
 
 signup_remove_request_error_no_signup = """
