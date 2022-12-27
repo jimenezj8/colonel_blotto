@@ -66,3 +66,20 @@ Rules for each battle will be announced at the start of the submission window fo
 
 To learn more, read about the Blotto game <https://en.wikipedia.org/wiki/Blotto_game|here> or check out the homepage of this app. Brought to you by Jovi :smile:
 """
+
+round_end_announcement = """
+Game {game_id} round {round_num} has ended! To see how you scored, check out the app homepage.
+
+Here's a snapshot of the scores for this round:
+1. <@{first}>: {first_score}
+2. <@{second}>: {second_score}
+3. <@{third}>: {third_score}
+
+To see how you're doing in the game overall, you can also check out the app homepage.
+"""
+
+game_end_announcement = """
+Game {game_id} has ended! Congratulations to <@{winner}>, you've placed first with a score of {winner_score}!
+
+Thanks for playing everyone; if you'd like to view your scores, you can check it out on the app homepage, with detailed results about how you did on each round and in the game overall.
+"""

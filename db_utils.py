@@ -1,16 +1,20 @@
 import datetime
-import os
 
-from typing import Union
-
+import pandas as pd
 import sqlalchemy as sa
-
 from sqlalchemy.orm import sessionmaker
 
 import blotto
-
-from models import Engine, MetaData, Game, Participant, Round, Submission, Result
-
+from models import (
+    Engine,
+    Game,
+    GameResult,
+    MetaData,
+    Participant,
+    Round,
+    RoundResult,
+    Submission,
+)
 
 Session = sessionmaker(Engine)
 
@@ -67,7 +71,12 @@ def create_new_game(
 
     return result.inserted_primary_key[0]
 
-    return result
+
+def create_new_rounds(rounds: list[dict]) -> None:
+    rounds = [Round(**round) for round in rounds]
+    with Session() as session:
+        session.add_all(rounds)
+        session.commit()
 
 
 def get_game_start(game_id: int) -> datetime.datetime:
@@ -134,12 +143,35 @@ def get_game(game_id: int) -> Game:
         return session.execute(select).scalar_one()
 
 
-def get_results(game_id: int, round_num: int) -> list[Result]:
+def get_round_results(game_id: int, round_num: int) -> list[RoundResult]:
     select = (
-        sa.select(Result)
-        .where(Result.game_id == game_id, Result.round_number == round_num)
-        .order_by(Result.rank.asc())
+        sa.select(RoundResult)
+        .where(RoundResult.game_id == game_id, RoundResult.round_number == round_num)
+        .order_by(RoundResult.rank.asc())
     )
 
     with Session() as session:
         return session.execute(select).scalars().all()
+
+
+def get_game_results(game_id: int) -> list[GameResult]:
+    select = (
+        sa.select(GameResult)
+        .where(GameResult.game_id == game_id)
+        .order_by(GameResult.rank.asc())
+    )
+
+    with Session() as session:
+        return session.execute(select).scalars().all()
+
+
+def get_submissions_dataframe(game_id: int) -> pd.DataFrame:
+    select = sa.select(Submission).where(Submission.game_id == game_id)
+
+    return pd.read_sql(str(select), Engine)
+
+
+def get_round_results_dataframe(game_id: int) -> pd.DataFrame:
+    select = sa.select(RoundResult).where(RoundResult.game_id == game_id)
+
+    return pd.read_sql(str(select), Engine)
