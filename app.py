@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import sys
+import time
 
 import pytz
 from slack_bolt import Ack, App, BoltContext, Respond
@@ -584,6 +585,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
                 round_rules=round_obj.RULES,
             ),
         )
+        time.sleep(1)
 
         logger.info(f"Round {round_num} rules posted, scheduling end of round")
 
@@ -772,6 +774,7 @@ def handle_new_game_submission(
         },
         unfurl_links=False,
     )
+    time.sleep(1)
 
     logger.info("Game announced, scheduling signup close action")
     client.chat_scheduleMessage(
