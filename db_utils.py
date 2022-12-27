@@ -52,7 +52,7 @@ def remove_user_from_game(user_id, game_id):
 
 def create_new_game(
     num_rounds: int, round_length: datetime.timedelta, game_start: datetime.datetime
-):
+) -> int:
     games = MetaData.tables["game"]
 
     insert = games.insert().values(
@@ -65,35 +65,7 @@ def create_new_game(
     with Engine.connect() as con:
         result = con.execute(insert)
 
-    return result
-
-
-def generate_rounds(
-    game_id: int,
-    num_rounds: int,
-    round_length: datetime.timedelta,
-    game_start: datetime.datetime,
-):
-    rounds = MetaData.tables["round"]
-
-    values = []
-    for round_number in range(num_rounds):
-        round = blotto.RoundLibrary.get_random()
-        row = {
-            "id": round.ID,
-            "game_id": game_id,
-            "number": round_number + 1,
-            "start": (game_start + round_length * round_number),
-            "end": (game_start + round_length * (round_number + 1)),
-            "fields": round.fields,
-            "soldiers": round.soldiers,
-            "canceled": False,
-        }
-        values.append(row)
-
-    insert = rounds.insert().values(values)
-    with Engine.connect() as con:
-        result = con.execute(insert)
+    return result.inserted_primary_key[0]
 
     return result
 

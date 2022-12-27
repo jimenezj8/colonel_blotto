@@ -30,14 +30,14 @@ class DecreasingSoldiers(BlottoRound):
     ID = 1
     DIFFICULTY = 1
     RULES = """
-    All submissions must exhibit a decreasing number of soldiers in each next field.
-    That is, if in Field 1, you wish to allocate 10 soldiers, Field 2 may have no more than 10 soldiers.
-
-    Scoring will be as follows:
-    * In each field, score will be equal to:
-        * The difference in soldiers for the person with more soldiers
-        * 0 for the person with less soldiers
-    """
+> All submissions must exhibit a decreasing number of soldiers in each next field.
+> That is, if in Field 1, you wish to allocate 10 soldiers, Field 2 may have no more than 10 soldiers.
+> 
+> Scoring will be as follows:
+> * In each field, score will be equal to:
+>     * The difference in soldiers for the person with more soldiers
+>     * 0 for the person with less soldiers
+"""
 
     def __init__(
         self, fields: Union[int, None] = None, soldiers: Union[int, None] = None
