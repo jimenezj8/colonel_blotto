@@ -152,6 +152,7 @@ class RoundLibrary:
 class GameFactory:
     @classmethod
     def new_game(
+        cls,
         num_rounds: int,
         round_length: datetime.timedelta,
         start: datetime.datetime,

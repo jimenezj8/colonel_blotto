@@ -757,7 +757,7 @@ def handle_new_game_submission(
 
     logger.info("Valid params, creating game instance")
 
-    game_id = blotto.GameFactory.new_game()
+    game_id = blotto.GameFactory.new_game(num_rounds, round_length, signup_close)
 
     logger.info("Game created, announcing")
 

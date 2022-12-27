@@ -57,17 +57,16 @@ def remove_user_from_game(user_id, game_id):
 def create_new_game(
     num_rounds: int, round_length: datetime.timedelta, game_start: datetime.datetime
 ) -> int:
-    games = MetaData.tables["game"]
-
-    insert = games.insert().values(
+    insert = sa.insert(Game).values(
         num_rounds=num_rounds,
         round_length=round_length,
         start=game_start,
         canceled=False,
     )
 
-    with Engine.connect() as con:
-        result = con.execute(insert)
+    with Session() as session:
+        result = session.execute(insert)
+        session.commit()
 
     return result.inserted_primary_key[0]
 
