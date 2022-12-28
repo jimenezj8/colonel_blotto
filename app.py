@@ -212,7 +212,7 @@ def serve_new_game_modal(
     )
 
 
-@app.command("/submit_round")
+@app.command("/submit_strategy")
 def serve_submission_modal(
     ack: Ack, command: dict, client: WebClient, logger: logging.Logger
 ):
