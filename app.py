@@ -553,6 +553,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         metadata_payload = metadata["event_payload"]
 
         game_id = metadata_payload["game_id"]
+        game = db_utils.get_game(game_id)
 
         logger.info(f"Game {game_id} starting")
         if len(db_utils.get_participants(game_id)) < 2:
@@ -561,9 +562,12 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             logger.info("Game canceled successfully")
             return
 
+        elif game.canceled:
+            logger.info("Game was canceled, no need to announce")
+            return
+
         logger.info("Posting game announcement")
 
-        game = db_utils.get_game(game_id)
         client.chat_postMessage(
             token=BOT_TOKEN,
             channel=metadata_payload["channel_id"],
