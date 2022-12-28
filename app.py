@@ -8,6 +8,7 @@ import pytz
 from slack_bolt import Ack, App, BoltContext, Respond
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.web.client import WebClient
+from sqlalchemy.exc import NoResultFound
 
 import blotto
 import db_utils
@@ -35,7 +36,19 @@ def cancel_game_command_handler(
     response_channel = command["channel_id"]
     game_id = int(command["text"])
 
-    game = db_utils.get_game(game_id)
+    try:
+        game = db_utils.get_game(game_id)
+    except NoResultFound:
+        logger.info("Game requested to cancel does not exist")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            user=user_id,
+            channel=response_channel,
+            text="The game you've requested to cancel doesn't exist, please double-check the ID you provided.",
+        )
+        return
+
     if pytz.utc.localize(datetime.datetime.utcnow()) >= game.start:
         logger.info("Game has already begun, letting user know")
 
@@ -45,6 +58,7 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel has already begun, sorry.",
         )
+        return
 
     elif game.canceled:
         logger.info("Game has already been canceled, letting user know")
@@ -55,6 +69,7 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel was already canceled.",
         )
+        return
 
     logger.info(f"Canceling game {game_id} by request from {user_id}")
     db_utils.cancel_game(game_id)
