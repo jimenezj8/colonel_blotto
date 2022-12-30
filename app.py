@@ -249,7 +249,32 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_game_doesnt_exist,
         )
 
-    logger.info("Serving user submission modal")
+        return
+
+    if game.canceled:
+        logger.info("Game specified has been canceled, messaging user")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.general_game_canceled,
+        )
+
+        return
+
+    try:
+        db_utils.check_participation(user_id, game_id)
+    except NoResultFound:
+        logger.info(f"{user_id} is not signed up for game {game_id}")
+        logger.info("Messaging user")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.submit_strategy_error_user_not_in_game,
+        )
 
     round = (
         blotto.DecreasingSoldiers()
