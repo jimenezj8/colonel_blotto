@@ -467,8 +467,11 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     game_id = int(message["metadata"]["event_payload"]["game_id"])
 
-    if db_utils.signup_exists(user_id, game_id):
+    try:
+        db_utils.check_participation(user_id, game_id)
+
         logger.info("User already signed up for game, request denied")
+        logger.info("Messaging user")
 
         client.chat_postEphemeral(
             token=BOT_TOKEN,
@@ -477,6 +480,8 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             user=user_id,
         )
         return
+    except NoResultFound:
+        logger.info("Verified user has not already signed up")
 
     signup_close = db_utils.get_game_start(game_id)
     if signup_close < datetime.datetime.fromtimestamp(
@@ -504,7 +509,8 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         token=BOT_TOKEN,
         channel=message_channel,
         text=messages.signup_request_success.format(
-            game_id=game_id, game_start=int(game_start.timestamp())
+            game_id=game_id,
+            game_start=messages.format_timestamp(int(game_start.timestamp())),
         ),
         user=user_id,
     )
@@ -562,8 +568,12 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     game_id = int(message["metadata"]["event_payload"]["game_id"])
 
-    if not db_utils.signup_exists(user_id, game_id):
+    try:
+        db_utils.check_participation(user_id, game_id)
+        logger.info("Verified user has signed up")
+    except NoResultFound:
         logger.info("Signup record not located, cannot be removed")
+        logger.info("Messaging user")
 
         client.chat_postEphemeral(
             token=BOT_TOKEN,
@@ -639,7 +649,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             text=messages.round_start_announcement.format(
                 game_id=game_id,
                 round_num=round.number,
-                round_end=int(round.end.timestamp()),
+                round_end=messages.format_timestamp(int(round.end.timestamp())),
                 round_rules=round_obj.RULES,
             ),
         )
@@ -763,7 +773,7 @@ def ignore_messages(ack: Ack, logger: logging.Logger):
     logger.info("Message posted somewhere, nobody cares")
 
 
-@app.view("submit_round")
+@app.view("submit_strategy")
 def handle_round_submission(
     ack: Ack,
     view: dict,
@@ -771,7 +781,64 @@ def handle_round_submission(
     context: BoltContext,
     logger: logging.Logger,
 ):
-    pass
+    user_id = context["user_id"]
+
+    metadata = json.loads(view["private_metadata"])
+    game_id = metadata["game_id"]
+    round_num = metadata["round_num"]
+
+    round = db_utils.get_round(game_id, round_num)
+
+    inputs = view["state"]["values"]
+    fields = [
+        inputs[f"field-{i+1}"][f"field-{i+1}"]["value"] for i in range(round.fields)
+    ]
+    errors = {}
+    for i, soldiers in enumerate(fields):
+        try:
+            fields[i] = int(soldiers)
+        except ValueError:
+            errors[f"field-{i+1}"] = "Argument must be an integer"
+
+    if errors:
+        ack(response_action="errors", errors=errors)
+
+        return
+
+    round_obj = blotto.RoundLibrary.load_round(
+        round.id, round.fields, round.soldiers, round.game_id
+    )
+    try:
+        field_errors = round_obj.check_field_rules(fields)
+
+    except ValueError:
+        ack(
+            response_action="errors",
+            errors={
+                f"field-{i+1}": "Total soldier count is too high"
+                for i in range(round.fields)
+            },
+        )
+
+        return
+
+    else:
+        if field_errors:
+            ack(response_action="errors", errors=field_errors)
+
+            return
+
+    logger.info("Valid submission, accepted")
+    ack()
+
+    logger.info("Messaging user")
+
+    client.chat_postEphemeral(
+        token=BOT_TOKEN,
+        channel=user_id,
+        user=user_id,
+        text="Successfully submitted!",
+    )
 
 
 @app.view("new_game")
@@ -831,7 +898,7 @@ def handle_new_game_submission(
             num_rounds=num_rounds,
             round_length=round_length,
             game_id=game_id,
-            game_start=int(signup_close.timestamp()),
+            game_start=messages.format_timestamp(int(signup_close.timestamp())),
         ),
         metadata={
             "event_type": "game_announced",
