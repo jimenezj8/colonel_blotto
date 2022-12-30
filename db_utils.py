@@ -19,19 +19,13 @@ from models import (
 Session = sessionmaker(Engine)
 
 
-def signup_exists(user_id, game_id):
-    signups = MetaData.tables["participant"]
-
-    select = signups.select().where(
-        signups.c.user_id == user_id, signups.c.game_id == game_id
+def check_participation(user_id: str, game_id: int) -> Participant:
+    select = sa.select(Participant).where(
+        Participant.user_id == user_id, Participant.game_id == game_id
     )
 
-    with Engine.connect() as con:
-        result = con.execute(select).all()
-        if len(result) != 0:
-            return True
-
-    return False
+    with Session() as session:
+        return session.execute(select).scalar_one()
 
 
 def add_user_to_game(user_id, game_id):
@@ -85,17 +79,15 @@ def get_game_start(game_id: int) -> datetime.datetime:
         return session.execute(select).first()[0]
 
 
-def get_user_signups(user_id):
-    signups = MetaData.tables["participant"]
+def get_user_active_games(user_id: str) -> list[Game]:
+    select = (
+        sa.select(Game)
+        .join(Participant, Game.id == Participant.game_id)
+        .where(Participant.user_id == user_id)
+    )
 
-    select = sa.select([signups.c.game_id]).where(signups.c.user_id == user_id)
-
-    participating_in = []
-    with Engine.connect() as con:
-        for row in con.execute(select):
-            participating_in.append(row[0])
-
-    return participating_in
+    with Session() as session:
+        return session.execute(select).scalars().all()
 
 
 def get_round(game_id: int, round_num: int) -> Round | None:
@@ -174,3 +166,12 @@ def get_round_results_dataframe(game_id: int) -> pd.DataFrame:
     select = sa.select(RoundResult).where(RoundResult.game_id == game_id)
 
     return pd.read_sql(str(select), Engine)
+
+
+def get_active_round(game_id: int, current_time: datetime.datetime) -> Round:
+    select = sa.select(Round).where(
+        Round.game_id == game_id, Round.start < current_time, Round.end > current_time
+    )
+
+    with Session() as session:
+        return session.execute(select).scalar_one()
