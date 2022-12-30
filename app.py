@@ -302,7 +302,8 @@ def serve_submission_modal(
 
     view = {
         "type": "modal",
-        "callback_id": "submit_round",
+        "callback_id": "submit_strategy",
+        "private_metadata": json.dumps({"game_id": game_id, "round_num": round.number}),
         "title": {"type": "plain_text", "text": "Strategy submission"},
         "submit": {
             "type": "plain_text",
