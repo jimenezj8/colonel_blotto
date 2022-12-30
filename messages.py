@@ -1,26 +1,6 @@
-submit_round_error_multiple_active_games = """
-Sorry, it looks like you're participating in multiple active games currently.
+def format_timestamp(timestamp: int) -> str:
+    return f"<!date^{timestamp}^{{date_short_pretty}} at {{time}}| >"
 
-Before you can submit your strategy, you must select which game it will apply to.
-Choose from the following games: {games}
-
-Next time you use the slash command `/submit_round`, please include the relevant game ID.
-"""
-
-submit_round_error_no_active_games = """
-Sorry, it looks like you're not participating in any active games.
-
-Please sign up for a new game if you would like to participate.
-"""
-
-submit_round_error_invalid_game = """
-Sorry, I couldn't find any record of your participation in the game you indicated. Please verify the game ID
-you provided is correct before attempting to submit again.
-
-For your reference, the active games you are signed up for include: {games}
-
-You can always check your participation status on my homepage as well.
-"""
 
 signup_request_error_duplicate = """
 You have already signed up for game {game_id}. Glad you're excited, though!
@@ -31,11 +11,11 @@ Sorry, the game you signed up for has already begun. Try starting a new game!
 """
 
 signup_request_success = """
-You signed up for Blotto game {game_id}! Round 1 will begin <!date^{game_start}^{{date_short_pretty}} at {{time}}| >.
+You signed up for Blotto game {game_id}! Round 1 will begin {game_start}.
 """
 
 signup_remove_request_error_no_signup = """
-I can't find any record indicating you signed up for game {game_id}; if you think this is a mistake, reach out to @Jovi.
+I can't find any record indicating you signed up for game {game_id}; if you think this is a mistake, reach out to Jovi.
 """
 
 signup_remove_request_success = """
@@ -51,7 +31,7 @@ Good luck! :fist:
 """
 
 round_start_announcement = """
-Game {game_id} round {round_num} has started! Participants have until <!date^{round_end}^{{date_short_pretty}} at {{time}}| > to get their strategies submitted. Please use the command `/submit_round` to do so.
+Game {game_id} round {round_num} has started! Participants have until {round_end} to get their strategies submitted. Please use the command `/submit_strategy` with the appropriate game ID to do so.
 
 The rules for this round are as follows:
 {round_rules}
@@ -62,7 +42,7 @@ new_game_announcement = """
 
 Raise your hands :man-raising-hand: :woman-raising-hand: to test your grit and game theory over the course of {num_rounds} battles in a round-robin style tournament. Each round will have a submission window of {round_length} hours.
 
-Rules for each battle will be announced at the start of the submission window for that round. The signup period for Game {game_id} will close <!date^{game_start}^{{date_short_pretty}} at {{time}}| >.
+Rules for each battle will be announced at the start of the submission window for that round. The signup period for Game {game_id} will close {game_start}.
 
 To learn more, read about the Blotto game <https://en.wikipedia.org/wiki/Blotto_game|here> or check out the homepage of this app. Brought to you by Jovi :smile:
 """
@@ -82,4 +62,30 @@ game_end_announcement = """
 Game {game_id} has ended! Congratulations to <@{winner}>, you've placed first with a score of {winner_score}!
 
 Thanks for playing everyone; if you'd like to view your scores, you can check it out on the app homepage, with detailed results about how you did on each round and in the game overall.
+"""
+
+general_rules = """
+> • Soldiers must be integers
+> • You can make multiple submissions, but only the last one will count
+> • No collusion!
+"""
+
+submit_strategy_error_no_game_id = """
+Please provide a game ID to submit your strategy.
+"""
+
+submit_strategy_error_user_not_in_game = """
+It looks like you're not signed up for that game, please double check the game ID you provided.
+"""
+
+submit_strategy_error_game_inactive = """
+Sorry, the game you specified isn't active right now. Please check the start and end times using `/blotto_game_info`.
+"""
+
+submit_strategy_error_game_doesnt_exist = """
+The game you specified doesn't exist, please double-check the ID.
+"""
+
+general_game_canceled = """
+I'm sorry, the game you specified was canceled.
 """
