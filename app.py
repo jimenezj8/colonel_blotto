@@ -324,8 +324,22 @@ def serve_submission_modal(
             {
                 "type": "section",
                 "text": {
+                    "type": "mrkdwn",
+                    "text": messages.general_rules,
+                },
+            },
+            {
+                "type": "header",
+                "text": {
                     "type": "plain_text",
-                    "text": round_rules,
+                    "text": "Round rules",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": round_obj.RULES,
                 },
             },
             {"type": "divider"},
@@ -333,7 +347,7 @@ def serve_submission_modal(
                 "type": "section",
                 "text": {
                     "type": "plain_text",
-                    "text": f"You have {round_soldiers} soldiers to distribute amongst {round_fields} fields. Good luck, Major!",
+                    "text": f"You have {round.soldiers} soldiers to distribute amongst {round.fields} fields. Good luck, Major!",
                 },
             },
         ]
@@ -353,7 +367,7 @@ def serve_submission_modal(
                     "text": f"Field {field_num + 1}",
                 },
             }
-            for field_num in range(round_fields)
+            for field_num in range(round.fields)
         ],
     }
 
