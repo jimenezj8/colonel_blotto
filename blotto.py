@@ -103,24 +103,23 @@ class DecreasingSoldiers(BlottoRound):
 
         No field may have a non-integer submission. No field may have a negative submission.
 
-        This method should only be used by loaded configurations.
+        This method should only be used by loaded configurations. It returns a dictionary of field-specific errors for usage in responding to users.
         """
         if sum(submission) > self.soldiers:
             raise ValueError(f"Submitted soldiers must total less than {self.soldiers}")
+
+        errors = {}
         for field, soldiers in enumerate(submission):
-            if type(soldiers) is not int:
-                raise ValueError(
-                    f"Error on Field {field}: all submissions must be integer values"
-                )
             if soldiers < 0:
-                raise ValueError(
-                    f"Error on Field {field}: all submissions must be positive values"
-                )
+                errors[f"field-{field+1}"] = "Must be positive value"
+
             if field > 0:
                 if soldiers > submission[field - 1]:
-                    raise ValueError(
-                        f"Error on Field {field}: decreasing soldiers criteria not met"
-                    )
+                    errors[
+                        f"field-{field+1}"
+                    ] = f"Must be fewer soldiers than Field {field}"
+
+        return errors
 
     def update_results(self):
         """
