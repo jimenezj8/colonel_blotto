@@ -236,20 +236,18 @@ def serve_submission_modal(
 
     game_id = int(command["text"])
 
-    else:
-        if not db_utils.signup_exists(user_id, game_id):
-            logger.info("User is not signed up for indicated game")
-            logger.info("Messaging user about the status of their participation")
-            client.chat_postEphemeral(
-                token=BOT_TOKEN,
-                channel=command["channel_id"],
-                user=user_id,
-                text=messages.submit_round_error_invalid_game.format(
-                    games=", ".join(games)
-                ),
-            )
+    try:
+        game = db_utils.get_game(game_id)
+    except NoResultFound:
+        logger.info("The specified game doesn't exist")
+        logger.info("Messaging user")
 
-            return
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.submit_strategy_error_game_doesnt_exist,
+        )
 
     logger.info("Serving user submission modal")
 
