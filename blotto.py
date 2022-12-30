@@ -3,6 +3,7 @@ import logging
 import random
 
 import db_utils
+from models import Engine
 
 
 logging.basicConfig(level=logging.INFO)
@@ -94,7 +95,7 @@ class DecreasingSoldiers(BlottoRound):
 
         super().__init__(fields, soldiers, field_bounds, soldier_bounds, game_id)
 
-    def check_field_rules(self, submission: list[int]):
+    def check_field_rules(self, submission: list[int]) -> dict[str, str]:
         """
         This round enforces that fields submitted must have non-increasing numbers of soldiers in fields.
 
