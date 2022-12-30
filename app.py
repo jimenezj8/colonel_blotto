@@ -219,39 +219,22 @@ def serve_submission_modal(
     ack()
 
     user_id = command["user_id"]
-    game_id = command["text"]
+    channel_id = command["channel_id"]
 
-    if not game_id:
-        games = db_utils.get_user_signups(user_id)
+    if not command["text"]:
+        logger.info("User did not provide a game ID")
+        logger.info("Messaging user")
 
-        if len(games) > 1:
-            logger.info("User participating in multiple games, must select one")
-            logger.info("Messaging user with game ids for active games")
-            client.chat_postEphemeral(
-                token=BOT_TOKEN,
-                channel=command["channel_id"],
-                user=user_id,
-                text=messages.submit_round_error_multiple_active_games.format(
-                    games=", ".join(games)
-                ),
-            )
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.submit_strategy_error_no_game_id,
+        )
 
-            return
+        return
 
-        elif not games:
-            logger.info("User is not participating in any active games")
-            logger.info("Messaging user about the status of their participation")
-            client.chat_postEphemeral(
-                token=BOT_TOKEN,
-                channel=command["channel_id"],
-                user=user_id,
-                text=messages.submit_round_error_no_active_games,
-            )
-
-            return
-
-        else:
-            game_id = games[0]
+    game_id = int(command["text"])
 
     else:
         if not db_utils.signup_exists(user_id, game_id):
