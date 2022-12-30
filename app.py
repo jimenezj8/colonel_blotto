@@ -353,6 +353,7 @@ def serve_submission_modal(
         ]
         + [
             {
+                "block_id": f"field-{field_num+1}",
                 "type": "input",
                 "element": {
                     "type": "plain_text_input",
