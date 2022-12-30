@@ -276,12 +276,29 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_user_not_in_game,
         )
 
-    round = (
-        blotto.DecreasingSoldiers()
-    )  # TODO: interaction model with Round objects and assignments to Games
-    round_rules = round.rules
-    round_fields = round.fields
-    round_soldiers = round.soldiers
+        return
+
+    try:
+        round = db_utils.get_active_round(
+            game_id, pytz.utc.localize(datetime.datetime.utcnow())
+        )
+    except NoResultFound:
+        logger.info("Game specified isn't currently active")
+        logger.info("Messaging user")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.submit_strategy_error_game_inactive,
+        )
+
+        return
+
+    logger.info("Serving user submission modal")
+    round_obj = blotto.RoundLibrary.load_round(
+        round.id, round.fields, round.soldiers, round.game_id
+    )
 
     view = {
         "type": "modal",
