@@ -115,7 +115,7 @@ def serve_new_game_modal(
     """
     ack()
 
-    logger.info("Creating new game")
+    logger.info("Serving new game modal")
 
     client.views_open(
         trigger_id=command["trigger_id"],
