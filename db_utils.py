@@ -156,9 +156,25 @@ def get_game_results(game_id: int) -> list[GameResult]:
 
 
 def get_submissions_dataframe(game_id: int) -> pd.DataFrame:
-    select = sa.select(Submission).where(Submission.game_id == game_id)
+    select = (
+        sa.select(Submission)
+        .distinct(
+            Submission.game_id,
+            Submission.user_id,
+            Submission.round_number,
+            Submission.field,
+        )
+        .where(Submission.game_id == game_id)
+        .order_by(
+            Submission.game_id,
+            Submission.user_id,
+            Submission.round_number,
+            Submission.field,
+            Submission.timestamp.desc(),
+        )
+    )
 
-    return pd.read_sql(str(select), Engine)
+    return pd.read_sql(select, Engine)
 
 
 def get_round_results_dataframe(game_id: int) -> pd.DataFrame:
