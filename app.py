@@ -965,7 +965,15 @@ if __name__ == "__main__":
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
     try:
+        if ENV == "production":
+            app.client.chat_postMessage(
+                token=BOT_TOKEN, channel="testing", text="Back online"
+            )
         handler.start()
     except KeyboardInterrupt:
-        print("\nExiting")
+        app.logger.info("Shutting down")
+        if ENV == "production":
+            app.client.chat_postMessage(
+                token=BOT_TOKEN, channel="testing", text="Shutting down temporarily"
+            )
         sys.exit(0)
