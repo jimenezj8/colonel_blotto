@@ -4,7 +4,6 @@ import pandas as pd
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 
-import blotto
 from models import (
     Engine,
     Game,
@@ -175,3 +174,22 @@ def get_active_round(game_id: int, current_time: datetime.datetime) -> Round:
 
     with Session() as session:
         return session.execute(select).scalar_one()
+
+
+def submit_user_strategy(
+    game_id: int, round_num: int, user_id: str, strategy: list[int]
+) -> None:
+    submissions = [
+        Submission(
+            game_id=game_id,
+            round_number=round_num,
+            user_id=user_id,
+            field=i + 1,
+            soldiers=soldiers,
+        )
+        for i, soldiers in enumerate(strategy)
+    ]
+
+    with Session() as session:
+        session.add_all(submissions)
+        session.commit()

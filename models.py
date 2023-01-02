@@ -62,12 +62,12 @@ class Submission(Base):
     game_id = sa.Column(nullable=False)
     round_number = sa.Column(nullable=False)
     user_id = sa.Column(nullable=False)
-    field_number = sa.Column(sa.Integer, nullable=False)
-    num_soldiers = sa.Column(sa.Integer, nullable=False)
+    field = sa.Column(sa.Integer, nullable=False)
+    soldiers = sa.Column(sa.Integer, nullable=False)
 
     __table_args__ = (
         sa.PrimaryKeyConstraint(
-            "game_id", "round_number", "user_id", "field_number", name="submission_pk"
+            "game_id", "round_number", "user_id", "field", name="submission_pk"
         ),
         sa.ForeignKeyConstraint(
             columns=["game_id", "user_id"],

@@ -775,7 +775,7 @@ def ignore_messages(ack: Ack, logger: logging.Logger):
 
 
 @app.view("submit_strategy")
-def handle_round_submission(
+def handle_strategy_submission(
     ack: Ack,
     view: dict,
     client: WebClient,
@@ -783,6 +783,7 @@ def handle_round_submission(
     logger: logging.Logger,
 ):
     user_id = context["user_id"]
+    channel_id = context["user_id"]
 
     metadata = json.loads(view["private_metadata"])
     game_id = metadata["game_id"]
@@ -832,11 +833,13 @@ def handle_round_submission(
     logger.info("Valid submission, accepted")
     ack()
 
+    db_utils.submit_user_strategy(game_id, round_num, user_id, fields)
+
     logger.info("Messaging user")
 
     client.chat_postEphemeral(
         token=BOT_TOKEN,
-        channel=user_id,
+        channel=channel_id,
         user=user_id,
         text="Successfully submitted!",
     )
