@@ -860,7 +860,8 @@ def handle_strategy_submission(
     logger.info("Valid submission, accepted")
     ack()
 
-    db_utils.submit_user_strategy(game_id, round_num, user_id, fields)
+    timestamp = pytz.utc.localize(datetime.datetime.utcnow())
+    db_utils.submit_user_strategy(game_id, round_num, user_id, fields, timestamp)
 
     logger.info("Messaging user")
 

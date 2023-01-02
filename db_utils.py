@@ -177,15 +177,20 @@ def get_active_round(game_id: int, current_time: datetime.datetime) -> Round:
 
 
 def submit_user_strategy(
-    game_id: int, round_num: int, user_id: str, strategy: list[int]
+    game_id: int,
+    round_num: int,
+    user_id: str,
+    strategy: list[int],
+    timestamp: datetime.datetime,
 ) -> None:
     submissions = [
         Submission(
             game_id=game_id,
-            round_number=round_num,
             user_id=user_id,
+            round_number=round_num,
             field=i + 1,
             soldiers=soldiers,
+            timestamp=timestamp,
         )
         for i, soldiers in enumerate(strategy)
     ]

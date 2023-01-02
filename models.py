@@ -60,14 +60,20 @@ class Submission(Base):
     __tablename__ = "submission"
 
     game_id = sa.Column(nullable=False)
-    round_number = sa.Column(nullable=False)
     user_id = sa.Column(nullable=False)
+    round_number = sa.Column(nullable=False)
     field = sa.Column(sa.Integer, nullable=False)
     soldiers = sa.Column(sa.Integer, nullable=False)
+    timestamp = sa.Column(sa.DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
         sa.PrimaryKeyConstraint(
-            "game_id", "round_number", "user_id", "field", name="submission_pk"
+            "game_id",
+            "user_id",
+            "round_number",
+            "field",
+            "timestamp",
+            name="submission_pk",
         ),
         sa.ForeignKeyConstraint(
             columns=["game_id", "user_id"],
