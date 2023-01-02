@@ -3,6 +3,7 @@ import logging
 import random
 
 import db_utils
+from models import Engine
 
 
 logging.basicConfig(level=logging.INFO)
@@ -94,7 +95,7 @@ class DecreasingSoldiers(BlottoRound):
 
         super().__init__(fields, soldiers, field_bounds, soldier_bounds, game_id)
 
-    def check_field_rules(self, submission: list[int]):
+    def check_field_rules(self, submission: list[int]) -> dict[str, str]:
         """
         This round enforces that fields submitted must have non-increasing numbers of soldiers in fields.
 
@@ -102,24 +103,23 @@ class DecreasingSoldiers(BlottoRound):
 
         No field may have a non-integer submission. No field may have a negative submission.
 
-        This method should only be used by loaded configurations.
+        This method should only be used by loaded configurations. It returns a dictionary of field-specific errors for usage in responding to users.
         """
         if sum(submission) > self.soldiers:
             raise ValueError(f"Submitted soldiers must total less than {self.soldiers}")
+
+        errors = {}
         for field, soldiers in enumerate(submission):
-            if type(soldiers) is not int:
-                raise ValueError(
-                    f"Error on Field {field}: all submissions must be integer values"
-                )
             if soldiers < 0:
-                raise ValueError(
-                    f"Error on Field {field}: all submissions must be positive values"
-                )
+                errors[f"field-{field+1}"] = "Must be positive value"
+
             if field > 0:
                 if soldiers > submission[field - 1]:
-                    raise ValueError(
-                        f"Error on Field {field}: decreasing soldiers criteria not met"
-                    )
+                    errors[
+                        f"field-{field+1}"
+                    ] = f"Must be fewer soldiers than Field {field}"
+
+        return errors
 
     def update_results(self):
         """

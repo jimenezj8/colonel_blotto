@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import os
 import sys
@@ -16,6 +17,9 @@ import messages
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BOT_MEMBER_ID = "U03LWG7NAAY"
+ENV = os.getenv(
+    "ENV"
+)  # if ENV == "development", program will run through all validation but still allow the requested action to be attempted; in some cases this will still result in an error
 
 app = App(
     token=BOT_TOKEN,
@@ -47,7 +51,8 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel doesn't exist, please double-check the ID you provided.",
         )
-        return
+        if not ENV == "development":
+            return
 
     if pytz.utc.localize(datetime.datetime.utcnow()) >= game.start:
         logger.info("Game has already begun, letting user know")
@@ -58,7 +63,8 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel has already begun, sorry.",
         )
-        return
+        if not ENV == "development":
+            return
 
     elif game.canceled:
         logger.info("Game has already been canceled, letting user know")
@@ -69,7 +75,8 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel was already canceled.",
         )
-        return
+        if not ENV == "development":
+            return
 
     logger.info(f"Canceling game {game_id} by request from {user_id}")
     db_utils.cancel_game(game_id)
@@ -212,74 +219,103 @@ def serve_new_game_modal(
     )
 
 
-@app.command("/submit_round")
+@app.command("/submit_strategy")
 def serve_submission_modal(
     ack: Ack, command: dict, client: WebClient, logger: logging.Logger
 ):
     ack()
 
     user_id = command["user_id"]
-    game_id = command["text"]
+    channel_id = command["channel_id"]
 
-    if not game_id:
-        games = db_utils.get_user_signups(user_id)
+    if not command["text"]:
+        logger.info("User did not provide a game ID")
+        logger.info("Messaging user")
 
-        if len(games) > 1:
-            logger.info("User participating in multiple games, must select one")
-            logger.info("Messaging user with game ids for active games")
-            client.chat_postEphemeral(
-                token=BOT_TOKEN,
-                channel=command["channel_id"],
-                user=user_id,
-                text=messages.submit_round_error_multiple_active_games.format(
-                    games=", ".join(games)
-                ),
-            )
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.submit_strategy_error_no_game_id,
+        )
 
+        if not ENV == "development":
             return
 
-        elif not games:
-            logger.info("User is not participating in any active games")
-            logger.info("Messaging user about the status of their participation")
-            client.chat_postEphemeral(
-                token=BOT_TOKEN,
-                channel=command["channel_id"],
-                user=user_id,
-                text=messages.submit_round_error_no_active_games,
-            )
+    game_id = int(command["text"])
 
+    try:
+        game = db_utils.get_game(game_id)
+    except NoResultFound:
+        logger.info("The specified game doesn't exist")
+        logger.info("Messaging user")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.submit_strategy_error_game_doesnt_exist,
+        )
+
+        if not ENV == "development":
             return
 
-        else:
-            game_id = games[0]
+    if game.canceled:
+        logger.info("Game specified has been canceled, messaging user")
 
-    else:
-        if not db_utils.signup_exists(user_id, game_id):
-            logger.info("User is not signed up for indicated game")
-            logger.info("Messaging user about the status of their participation")
-            client.chat_postEphemeral(
-                token=BOT_TOKEN,
-                channel=command["channel_id"],
-                user=user_id,
-                text=messages.submit_round_error_invalid_game.format(
-                    games=", ".join(games)
-                ),
-            )
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.general_game_canceled,
+        )
 
+        if not ENV == "development":
+            return
+
+    try:
+        db_utils.check_participation(user_id, game_id)
+    except NoResultFound:
+        logger.info(f"{user_id} is not signed up for game {game_id}")
+        logger.info("Messaging user")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.submit_strategy_error_user_not_in_game,
+        )
+
+        if not ENV == "development":
+            return
+
+    try:
+        round = db_utils.get_active_round(
+            game_id, pytz.utc.localize(datetime.datetime.utcnow())
+        )
+    except NoResultFound:
+        logger.info("Game specified isn't currently active")
+        logger.info("Messaging user")
+
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=channel_id,
+            user=user_id,
+            text=messages.submit_strategy_error_game_inactive,
+        )
+
+        if not ENV == "development":
             return
 
     logger.info("Serving user submission modal")
-
-    round = (
-        blotto.DecreasingSoldiers()
-    )  # TODO: interaction model with Round objects and assignments to Games
-    round_rules = round.rules
-    round_fields = round.fields
-    round_soldiers = round.soldiers
+    round_obj = blotto.RoundLibrary.load_round(
+        round.id, round.fields, round.soldiers, round.game_id
+    )
 
     view = {
         "type": "modal",
-        "callback_id": "submit_round",
+        "callback_id": "submit_strategy",
+        "private_metadata": json.dumps({"game_id": game_id, "round_num": round.number}),
         "title": {"type": "plain_text", "text": "Strategy submission"},
         "submit": {
             "type": "plain_text",
@@ -300,8 +336,22 @@ def serve_submission_modal(
             {
                 "type": "section",
                 "text": {
+                    "type": "mrkdwn",
+                    "text": messages.general_rules,
+                },
+            },
+            {
+                "type": "header",
+                "text": {
                     "type": "plain_text",
-                    "text": round_rules,
+                    "text": "Round rules",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": round_obj.RULES,
                 },
             },
             {"type": "divider"},
@@ -309,12 +359,13 @@ def serve_submission_modal(
                 "type": "section",
                 "text": {
                     "type": "plain_text",
-                    "text": f"You have {round_soldiers} soldiers to distribute amongst {round_fields} fields. Good luck, Major!",
+                    "text": f"You have {round.soldiers} soldiers to distribute amongst {round.fields} fields. Good luck, Major!",
                 },
             },
         ]
         + [
             {
+                "block_id": f"field-{field_num+1}",
                 "type": "input",
                 "element": {
                     "type": "plain_text_input",
@@ -329,7 +380,7 @@ def serve_submission_modal(
                     "text": f"Field {field_num + 1}",
                 },
             }
-            for field_num in range(round_fields)
+            for field_num in range(round.fields)
         ],
     }
 
@@ -386,7 +437,8 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     if not "raising-hand" in reacji:
         logger.info("Not a valid signup reacji")
-        return
+        if not ENV == "development":
+            return
 
     logger.info("Signup reaction detected")
 
@@ -406,7 +458,8 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     # check if valid response from API
     if not message["ok"]:
         logger.info("SlackAPI did not return a valid response")
-        return
+        if not ENV == "development":
+            return
 
     # single out message content, check that bot sent message and it's a game signup
     message = message["messages"][0]
@@ -414,7 +467,8 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         not "has started a new game of Blotto" in message["text"]
     ):
         logger.info("Message did not meet criteria for valid signup request")
-        return
+        if not ENV == "development":
+            return
 
     # verify that user did not add accidental duplicate signup
     other_reactions = message.get("reactions", [])
@@ -424,12 +478,16 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
 
         if user_id in reaction["users"]:
             logger.info("User added duplicate signup request, no further action")
-            return
+            if not ENV == "development":
+                return
 
     game_id = int(message["metadata"]["event_payload"]["game_id"])
 
-    if db_utils.signup_exists(user_id, game_id):
+    try:
+        db_utils.check_participation(user_id, game_id)
+
         logger.info("User already signed up for game, request denied")
+        logger.info("Messaging user")
 
         client.chat_postEphemeral(
             token=BOT_TOKEN,
@@ -437,7 +495,10 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_request_error_duplicate.format(game_id=game_id),
             user=user_id,
         )
-        return
+        if not ENV == "development":
+            return
+    except NoResultFound:
+        logger.info("Verified user has not already signed up")
 
     signup_close = db_utils.get_game_start(game_id)
     if signup_close < datetime.datetime.fromtimestamp(
@@ -451,7 +512,8 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_request_error_game_started,
             user=user_id,
         )
-        return
+        if not ENV == "development":
+            return
 
     logger.info("Valid user signup request")
 
@@ -465,7 +527,8 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         token=BOT_TOKEN,
         channel=message_channel,
         text=messages.signup_request_success.format(
-            game_id=game_id, game_start=int(game_start.timestamp())
+            game_id=game_id,
+            game_start=messages.format_timestamp(int(game_start.timestamp())),
         ),
         user=user_id,
     )
@@ -479,7 +542,8 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     if not "raising-hand" in reacji:
         logger.info("Not a relevant reacji, ignoring")
-        return
+        if not ENV == "development":
+            return
 
     logger.info("Signup reaction removal detected")
 
@@ -499,7 +563,8 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     # check if valid response from API
     if not message["ok"]:
         logger.info("SlackAPI did not return a valid response")
-        return
+        if not ENV == "development":
+            return
 
     # single out message content, check that bot sent message and that it was for a game signup
     message = message["messages"][0]
@@ -507,7 +572,8 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
         not "has started a new game of Blotto" in message["text"]
     ):
         logger.info("Message did not meet criteria for valid signup withdrawal request")
-        return
+        if not ENV == "development":
+            return
 
     # verify that user did not remove accidental duplicate signup
     other_reactions = message.get("reactions", [])
@@ -517,14 +583,19 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 
         if user_id in reaction["users"]:
             logger.info("User removed duplicate signup request, no further action")
-            return
+            if not ENV == "development":
+                return
 
     logger.info("Valid user signup removal request")
 
     game_id = int(message["metadata"]["event_payload"]["game_id"])
 
-    if not db_utils.signup_exists(user_id, game_id):
+    try:
+        db_utils.check_participation(user_id, game_id)
+        logger.info("Verified user has signed up")
+    except NoResultFound:
         logger.info("Signup record not located, cannot be removed")
+        logger.info("Messaging user")
 
         client.chat_postEphemeral(
             token=BOT_TOKEN,
@@ -532,7 +603,8 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_remove_request_error_no_signup.format(game_id=game_id),
             user=user_id,
         )
-        return
+        if not ENV == "development":
+            return
 
     db_utils.remove_user_from_game(user_id, game_id)
 
@@ -560,11 +632,13 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             logger.info("Not enough participants, canceling game")
             db_utils.cancel_game(game_id)
             logger.info("Game canceled successfully")
-            return
+            if not ENV == "development":
+                return
 
         elif game.canceled:
             logger.info("Game was canceled, no need to announce")
-            return
+            if not ENV == "development":
+                return
 
         logger.info("Posting game announcement")
 
@@ -600,7 +674,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             text=messages.round_start_announcement.format(
                 game_id=game_id,
                 round_num=round.number,
-                round_end=int(round.end.timestamp()),
+                round_end=messages.format_timestamp(int(round.end.timestamp())),
                 round_rules=round_obj.RULES,
             ),
         )
@@ -724,15 +798,78 @@ def ignore_messages(ack: Ack, logger: logging.Logger):
     logger.info("Message posted somewhere, nobody cares")
 
 
-@app.view("submit_round")
-def handle_round_submission(
+@app.view("submit_strategy")
+def handle_strategy_submission(
     ack: Ack,
     view: dict,
     client: WebClient,
     context: BoltContext,
     logger: logging.Logger,
 ):
-    pass
+    user_id = context["user_id"]
+    channel_id = context["user_id"]
+
+    metadata = json.loads(view["private_metadata"])
+    game_id = metadata["game_id"]
+    round_num = metadata["round_num"]
+
+    round = db_utils.get_round(game_id, round_num)
+
+    inputs = view["state"]["values"]
+    fields = [
+        inputs[f"field-{i+1}"][f"field-{i+1}"]["value"] for i in range(round.fields)
+    ]
+    errors = {}
+    for i, soldiers in enumerate(fields):
+        try:
+            fields[i] = int(soldiers)
+        except ValueError:
+            errors[f"field-{i+1}"] = "Argument must be an integer"
+
+    if errors:
+        ack(response_action="errors", errors=errors)
+
+        if not ENV == "development":
+            return
+
+    round_obj = blotto.RoundLibrary.load_round(
+        round.id, round.fields, round.soldiers, round.game_id
+    )
+    try:
+        field_errors = round_obj.check_field_rules(fields)
+
+    except ValueError:
+        ack(
+            response_action="errors",
+            errors={
+                f"field-{i+1}": "Total soldier count is too high"
+                for i in range(round.fields)
+            },
+        )
+
+        if not ENV == "development":
+            return
+
+    else:
+        if field_errors:
+            ack(response_action="errors", errors=field_errors)
+
+            if not ENV == "development":
+                return
+
+    logger.info("Valid submission, accepted")
+    ack()
+
+    db_utils.submit_user_strategy(game_id, round_num, user_id, fields)
+
+    logger.info("Messaging user")
+
+    client.chat_postEphemeral(
+        token=BOT_TOKEN,
+        channel=channel_id,
+        user=user_id,
+        text="Successfully submitted!",
+    )
 
 
 @app.view("new_game")
@@ -792,7 +929,7 @@ def handle_new_game_submission(
             num_rounds=num_rounds,
             round_length=round_length,
             game_id=game_id,
-            game_start=int(signup_close.timestamp()),
+            game_start=messages.format_timestamp(int(signup_close.timestamp())),
         ),
         metadata={
             "event_type": "game_announced",
