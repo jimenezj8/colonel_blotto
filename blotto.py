@@ -23,7 +23,7 @@ class BlottoRound:
 
         if fields is None and soldiers is None:
             fields = self.random_fields()
-            soldiers = self.random_fields()
+            soldiers = self.random_soldiers()
 
         elif fields is not None and soldiers is not None:
             pass
