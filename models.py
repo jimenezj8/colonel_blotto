@@ -35,25 +35,26 @@ class Participant(Base):
         return f"Participant(user_id={self.user_id!r}, game_id={self.game_id!r})"
 
 
-class Round(Base):
-    __tablename__ = "round"
+class GameRound(Base):
+    __tablename__ = "game_round"
 
-    id = sa.Column(sa.Integer, nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True)
+    library_id = sa.Column(sa.Integer, nullable=False)
     game_id = sa.Column(sa.ForeignKey("game.id"), nullable=False)
-    number = sa.Column(sa.Integer, nullable=False)
-    start = sa.Column(sa.DateTime, nullable=False)
-    end = sa.Column(sa.DateTime, nullable=False)
+    start_time = sa.Column(sa.DateTime, nullable=False)
+    end_time = sa.Column(sa.DateTime, nullable=False)
     fields = sa.Column(sa.Integer, nullable=False)
     soldiers = sa.Column(sa.Integer, nullable=False)
-    canceled = sa.Column(sa.Boolean, nullable=False)
-
-    __table_args__ = (
-        sa.PrimaryKeyConstraint("game_id", "number", name="round_pk"),
-        {},
-    )
 
     def __repr__(self):
-        return f"Round(id={self.id!r}, game_id={self.game_id!r}, number={self.round!r}, start={self.start!r}, end={self.end!r})"
+        return (
+            f"Round(id={self.id!r}, "
+            f"library_id={self.library_id!r}, "
+            f"game_id={self.game_id!r}, "
+            f"number={self.round!r}, "
+            f"start={self.start!r}, "
+            f"end={self.end!r})"
+        )
 
 
 class Submission(Base):

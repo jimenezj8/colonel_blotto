@@ -5,43 +5,22 @@ import random
 import db_utils
 from models import Engine
 
-
 logging.basicConfig(level=logging.INFO)
 
 
 class BlottoRound:
     def __init__(
         self,
-        fields: int | None,
-        soldiers: int | None,
         field_bounds: tuple[int],
         soldier_bounds: tuple[int],
-        game_id: int | None = None,
+        game_id: int,
     ):
-        self._field_bounds = field_bounds
-        self._soldier_bounds = soldier_bounds
-
-        if fields is None and soldiers is None:
-            fields = self.random_fields()
-            soldiers = self.random_soldiers()
-
-        elif fields is not None and soldiers is not None:
-            pass
-
-        else:
-            raise ValueError(
-                "If one of [fields, soldiers] is provided, both must be provided."
-            )
+        fields = self._random_fields(field_bounds)
+        soldiers = self._random_soldiers(soldier_bounds)
 
         self._fields = fields
         self._soldiers = soldiers
         self._game_id = game_id
-
-    def random_fields(self) -> int:
-        return random.randint(*self.field_bounds)
-
-    def random_soldiers(self) -> int:
-        return random.randint(*self.soldier_bounds)
 
     @property
     def fields(self):
@@ -55,13 +34,11 @@ class BlottoRound:
     def game_id(self):
         return self._game_id
 
-    @property
-    def field_bounds(self):
-        return self._field_bounds
+    def _random_fields(self, field_bounds: tuple[int, int]) -> int:
+        return random.randint(*field_bounds)
 
-    @property
-    def soldier_bounds(self):
-        return self._soldier_bounds
+    def _random_soldiers(self, soldier_bounds: tuple[int, int]) -> int:
+        return random.randint(*soldier_bounds)
 
 
 class DecreasingSoldiers(BlottoRound):
