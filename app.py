@@ -161,42 +161,20 @@ def serve_new_game_modal(
                 },
                 {"type": "divider"},
                 {
-                    "block_id": "date",
+                    "block_id": "datetime",
                     "type": "input",
                     "element": {
-                        "action_id": "date",
-                        "type": "datepicker",
-                        "initial_date": (
-                            datetime.date.today() + datetime.timedelta(days=1)
-                        ).strftime("%Y-%m-%d"),
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select a date",
-                            "emoji": True,
-                        },
+                        "action_id": "datetime",
+                        "type": "datetimepicker",
+                        "initial_date_time": int(
+                            (
+                                datetime.datetime.now() + datetime.timedelta(days=1)
+                            ).timestamp()
+                        ),
                     },
                     "label": {
                         "type": "plain_text",
-                        "text": "Signup Close Date",
-                        "emoji": True,
-                    },
-                },
-                {
-                    "block_id": "time",
-                    "type": "input",
-                    "element": {
-                        "action_id": "time",
-                        "type": "timepicker",
-                        "initial_time": datetime.time(12).strftime("%H:%M"),
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select time",
-                            "emoji": True,
-                        },
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Signup Close Time",
+                        "text": "Signup Close",
                         "emoji": True,
                     },
                 },
@@ -214,7 +192,6 @@ def serve_new_game_modal(
                     },
                 },
             ],
-            "type": "modal",
         },
     )
 
@@ -435,7 +412,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     reacji = event["reaction"]
 
-    if not "raising-hand" in reacji:
+    if "raising-hand" not in reacji:
         logger.info("Not a valid signup reacji")
         if not ENV == "development":
             return
@@ -464,7 +441,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     # single out message content, check that bot sent message and it's a game signup
     message = message["messages"][0]
     if (not message.get("bot_id") == client.auth_test()["bot_id"]) or (
-        not "has started a new game of Blotto" in message["text"]
+        "has started a new game of Blotto" not in message["text"]
     ):
         logger.info("Message did not meet criteria for valid signup request")
         if not ENV == "development":
@@ -473,7 +450,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     # verify that user did not add accidental duplicate signup
     other_reactions = message.get("reactions", [])
     for reaction in other_reactions:
-        if not "raising-hand" in reaction["name"] or reaction["name"] == reacji:
+        if "raising-hand" not in reaction["name"] or reaction["name"] == reacji:
             continue
 
         if user_id in reaction["users"]:
@@ -540,7 +517,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     reacji = event["reaction"]
 
-    if not "raising-hand" in reacji:
+    if "raising-hand" not in reacji:
         logger.info("Not a relevant reacji, ignoring")
         if not ENV == "development":
             return
@@ -569,7 +546,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     # single out message content, check that bot sent message and that it was for a game signup
     message = message["messages"][0]
     if (not message["bot_id"] == client.auth_test()["bot_id"]) or (
-        not "has started a new game of Blotto" in message["text"]
+        "has started a new game of Blotto" not in message["text"]
     ):
         logger.info("Message did not meet criteria for valid signup withdrawal request")
         if not ENV == "development":
@@ -578,7 +555,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     # verify that user did not remove accidental duplicate signup
     other_reactions = message.get("reactions", [])
     for reaction in other_reactions:
-        if not "raising-hand" in reaction["name"]:
+        if "raising-hand" not in reaction["name"]:
             continue
 
         if user_id in reaction["users"]:
