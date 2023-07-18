@@ -134,29 +134,60 @@ def serve_new_game_modal(
                     "type": "input",
                     "element": {
                         "action_id": "num_rounds",
-                        "type": "plain_text_input",
-                        "placeholder": {"type": "plain_text", "text": "[number]"},
+                        "type": "number_input",
+                        "is_decimal_allowed": False,
+                        "initial_value": "3",
+                        "min_value": "1",
                     },
                     "label": {
                         "type": "plain_text",
                         "text": "Number of rounds",
-                        "emoji": True,
                     },
                 },
                 {
-                    "block_id": "round_length",
+                    "block_id": "round_length_num",
                     "type": "input",
                     "element": {
-                        "action_id": "round_length",
-                        "type": "plain_text_input",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "[number] [days/hours (default: days)]",
+                        "action_id": "round_length_num",
+                        "type": "number_input",
+                        "is_decimal_allowed": False,
+                        "initial_value": "1",
+                        "min_value": "1",
+                        "max_value": "60",
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Round Length - Number",
+                    },
+                },
+                {
+                    "block_id": "round_length_unit",
+                    "type": "input",
+                    "element": {
+                        "action_id": "round_length_unit",
+                        "type": "static_select",
+                        "options": [
+                            {
+                                "text": {"type": "plain_text", "text": "Minutes"},
+                                "value": "minutes",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Hours"},
+                                "value": "hours",
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Days"},
+                                "value": "days",
+                            },
+                        ],
+                        "initial_option": {
+                            "text": {"type": "plain_text", "text": "Hours"},
+                            "value": "hours",
                         },
                     },
                     "label": {
                         "type": "plain_text",
-                        "text": "Submission Window per Round",
+                        "text": "Round Length - Unit",
                     },
                 },
                 {"type": "divider"},
@@ -178,6 +209,7 @@ def serve_new_game_modal(
                         "emoji": True,
                     },
                 },
+                {"type": "divider"},
                 {
                     "block_id": "advertise_to_channels",
                     "type": "input",
@@ -864,28 +896,21 @@ def handle_new_game_submission(
     inputs = view["state"]["values"]
 
     num_rounds = int(inputs["num_rounds"]["num_rounds"]["value"])
-    round_length = inputs["round_length"]["round_length"]["value"]
+    round_length_num = int(inputs["round_length_num"]["round_length_num"]["value"])
+    round_length_unit = inputs["round_length_unit"]["round_length_unit"][
+        "selected_option"
+    ]["value"]
 
-    if "hour" in round_length:
-        round_length = datetime.timedelta(hours=int(round_length.split(" ")[0]))
+    round_length = datetime.timedelta(**{round_length_unit: round_length_num})
 
-    elif "day" in round_length:
-        round_length = datetime.timedelta(days=int(round_length.split(" ")[0]))
-
-    else:
-        round_length = datetime.timedelta(days=int(round_length))
-
-    date_input = inputs["date"]["date"]["selected_date"]
-    time_input = inputs["time"]["time"]["selected_time"]
+    signup_close = int(inputs["datetime"]["datetime"]["selected_date_time"])
     timezone_input = client.users_info(token=BOT_TOKEN, user=context["user_id"])[
         "user"
     ]["tz"]
 
     signup_close = (
         pytz.timezone(timezone_input)
-        .localize(
-            datetime.datetime.strptime(date_input + " " + time_input, "%Y-%m-%d %H:%M")
-        )
+        .localize(datetime.datetime.fromtimestamp(signup_close))
         .astimezone(pytz.utc)
     )
 
@@ -895,9 +920,9 @@ def handle_new_game_submission(
 
     logger.info("Game created, announcing")
 
-    selected_channel = view["state"]["values"]["advertise_to_channels"][
-        "advertise_to_channels"
-    ]["selected_channel"]
+    selected_channel = inputs["advertise_to_channels"]["advertise_to_channels"][
+        "selected_channel"
+    ]
 
     client.chat_postMessage(
         token=BOT_TOKEN,
