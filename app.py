@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import time
+from enum import Enum
 
 import pytz
 from slack_bolt import Ack, App, BoltContext, Respond
@@ -17,9 +18,17 @@ import messages
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BOT_MEMBER_ID = "U03LWG7NAAY"
-ENV = os.getenv(
-    "ENV"
-)  # if ENV == "development", program will run through all validation but still allow the requested action to be attempted; in some cases this will still result in an error
+
+
+class Environment(Enum):
+    DEV = "development"
+    PROD = "production"
+
+
+# if ENV == "development" validation will still allow the requested
+# action to be attempted in some cases this will still result in an error
+ENV = Environment(os.getenv("ENV"))
+
 
 app = App(
     token=BOT_TOKEN,
@@ -51,7 +60,7 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel doesn't exist, please double-check the ID you provided.",
         )
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     if pytz.utc.localize(datetime.datetime.utcnow()) >= game.start:
@@ -63,7 +72,7 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel has already begun, sorry.",
         )
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     elif game.canceled:
@@ -75,7 +84,7 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel was already canceled.",
         )
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     logger.info(f"Canceling game {game_id} by request from {user_id}")
@@ -248,7 +257,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_no_game_id,
         )
 
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     game_id = int(command["text"])
@@ -266,7 +275,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_game_doesnt_exist,
         )
 
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     if game.canceled:
@@ -279,7 +288,7 @@ def serve_submission_modal(
             text=messages.general_game_canceled,
         )
 
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     try:
@@ -295,7 +304,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_user_not_in_game,
         )
 
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     try:
@@ -313,7 +322,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_game_inactive,
         )
 
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     logger.info("Serving user submission modal")
@@ -446,7 +455,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     if "raising-hand" not in reacji:
         logger.info("Not a valid signup reacji")
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     logger.info("Signup reaction detected")
@@ -467,7 +476,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     # check if valid response from API
     if not message["ok"]:
         logger.info("SlackAPI did not return a valid response")
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     # single out message content, check that bot sent message and it's a game signup
@@ -476,7 +485,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         "has started a new game of Blotto" not in message["text"]
     ):
         logger.info("Message did not meet criteria for valid signup request")
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     # verify that user did not add accidental duplicate signup
@@ -487,7 +496,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
 
         if user_id in reaction["users"]:
             logger.info("User added duplicate signup request, no further action")
-            if not ENV == "development":
+            if not ENV == Environment.DEV:
                 return
 
     game_id = int(message["metadata"]["event_payload"]["game_id"])
@@ -504,7 +513,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_request_error_duplicate.format(game_id=game_id),
             user=user_id,
         )
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
     except NoResultFound:
         logger.info("Verified user has not already signed up")
@@ -521,7 +530,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_request_error_game_started,
             user=user_id,
         )
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     logger.info("Valid user signup request")
@@ -551,7 +560,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     if "raising-hand" not in reacji:
         logger.info("Not a relevant reacji, ignoring")
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     logger.info("Signup reaction removal detected")
@@ -572,7 +581,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     # check if valid response from API
     if not message["ok"]:
         logger.info("SlackAPI did not return a valid response")
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     # single out message content, check that bot sent message and that it was for a game signup
@@ -581,7 +590,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
         "has started a new game of Blotto" not in message["text"]
     ):
         logger.info("Message did not meet criteria for valid signup withdrawal request")
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     # verify that user did not remove accidental duplicate signup
@@ -592,7 +601,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 
         if user_id in reaction["users"]:
             logger.info("User removed duplicate signup request, no further action")
-            if not ENV == "development":
+            if not ENV == Environment.DEV:
                 return
 
     logger.info("Valid user signup removal request")
@@ -612,7 +621,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_remove_request_error_no_signup.format(game_id=game_id),
             user=user_id,
         )
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     db_utils.remove_user_from_game(user_id, game_id)
@@ -641,12 +650,12 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             logger.info("Not enough participants, canceling game")
             db_utils.cancel_game(game_id)
             logger.info("Game canceled successfully")
-            if not ENV == "development":
+            if not ENV == Environment.DEV:
                 return
 
         elif game.canceled:
             logger.info("Game was canceled, no need to announce")
-            if not ENV == "development":
+            if not ENV == Environment.DEV:
                 return
 
         logger.info("Posting game announcement")
@@ -838,7 +847,7 @@ def handle_strategy_submission(
     if errors:
         ack(response_action="errors", errors=errors)
 
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     round_obj = blotto.RoundLibrary.load_round(
@@ -856,14 +865,14 @@ def handle_strategy_submission(
             },
         )
 
-        if not ENV == "development":
+        if not ENV == Environment.DEV:
             return
 
     else:
         if field_errors:
             ack(response_action="errors", errors=field_errors)
 
-            if not ENV == "development":
+            if not ENV == Environment.DEV:
                 return
 
     logger.info("Valid submission, accepted")
@@ -968,14 +977,14 @@ if __name__ == "__main__":
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
     try:
-        if ENV == "production":
+        if ENV == Environment.PROD:
             app.client.chat_postMessage(
                 token=BOT_TOKEN, channel="testing", text="Back online"
             )
         handler.start()
     except KeyboardInterrupt:
         app.logger.info("Shutting down")
-        if ENV == "production":
+        if ENV == Environment.PROD:
             app.client.chat_postMessage(
                 token=BOT_TOKEN, channel="testing", text="Shutting down temporarily"
             )
