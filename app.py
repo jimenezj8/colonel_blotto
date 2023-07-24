@@ -35,58 +35,58 @@ app = App(
 logging.basicConfig(level=logging.DEBUG)
 
 
-@app.command("/cancel_game")
-def cancel_game_command_handler(
-    ack: Ack, client: WebClient, command: dict, logger: logging.Logger
-):
-    ack()
+# @app.command("/cancel_game")
+# def cancel_game_command_handler(
+#     ack: Ack, client: WebClient, command: dict, logger: logging.Logger
+# ):
+#     ack()
 
-    user_id = command["user_id"]
-    response_channel = command["channel_id"]
-    game_id = int(command["text"])
+#     user_id = command["user_id"]
+#     response_channel = command["channel_id"]
+#     game_id = int(command["text"])
 
-    try:
-        game = db_utils.get_game(game_id)
-    except NoResultFound:
-        logger.info("Game requested to cancel does not exist")
+#     try:
+#         game = db_utils.get_game(game_id)
+#     except NoResultFound:
+#         logger.info("Game requested to cancel does not exist")
 
-        client.chat_postEphemeral(
-            token=BOT_TOKEN,
-            user=user_id,
-            channel=response_channel,
-            text="The game you've requested to cancel doesn't exist, please double-check the ID you provided.",
-        )
-        if not ENV == enums.Environment.DEV:
-            return
+#         client.chat_postEphemeral(
+#             token=BOT_TOKEN,
+#             user=user_id,
+#             channel=response_channel,
+#             text="The game you've requested to cancel doesn't exist, please double-check the ID you provided.",
+#         )
+#         if not ENV == enums.Environment.DEV:
+#             return
 
-    if pytz.utc.localize(datetime.datetime.utcnow()) >= game.start:
-        logger.info("Game has already begun, letting user know")
+#     if pytz.utc.localize(datetime.datetime.utcnow()) >= game.start:
+#         logger.info("Game has already begun, letting user know")
 
-        client.chat_postEphemeral(
-            token=BOT_TOKEN,
-            user=user_id,
-            channel=response_channel,
-            text="The game you've requested to cancel has already begun, sorry.",
-        )
-        if not ENV == enums.Environment.DEV:
-            return
+#         client.chat_postEphemeral(
+#             token=BOT_TOKEN,
+#             user=user_id,
+#             channel=response_channel,
+#             text="The game you've requested to cancel has already begun, sorry.",
+#         )
+#         if not ENV == enums.Environment.DEV:
+#             return
 
-    elif game.canceled:
-        logger.info("Game has already been canceled, letting user know")
+#     elif game.canceled:
+#         logger.info("Game has already been canceled, letting user know")
 
-        client.chat_postEphemeral(
-            token=BOT_TOKEN,
-            user=user_id,
-            channel=response_channel,
-            text="The game you've requested to cancel was already canceled.",
-        )
-        if not ENV == enums.Environment.DEV:
-            return
+#         client.chat_postEphemeral(
+#             token=BOT_TOKEN,
+#             user=user_id,
+#             channel=response_channel,
+#             text="The game you've requested to cancel was already canceled.",
+#         )
+#         if not ENV == enums.Environment.DEV:
+#             return
 
-    logger.info(f"Canceling game {game_id} by request from {user_id}")
-    db_utils.cancel_game(game_id)
+#     logger.info(f"Canceling game {game_id} by request from {user_id}")
+#     db_utils.cancel_game(game_id)
 
-    logger.info("Game canceled successfully")
+#     logger.info("Game canceled successfully")
 
 
 @app.command("/modify_submission")
