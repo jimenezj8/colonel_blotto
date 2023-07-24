@@ -4,7 +4,6 @@ import logging
 import os
 import sys
 import time
-from enum import Enum
 
 import pytz
 from slack_bolt import Ack, App, BoltContext, Respond
@@ -14,20 +13,17 @@ from sqlalchemy.exc import NoResultFound
 
 import blotto
 import db_utils
+import enums
 import messages
+import views
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BOT_MEMBER_ID = "U03LWG7NAAY"
 
 
-class Environment(Enum):
-    DEV = "development"
-    PROD = "production"
-
-
 # if ENV == "development" validation will still allow the requested
 # action to be attempted in some cases this will still result in an error
-ENV = Environment(os.getenv("ENV"))
+ENV = enums.Environment(os.getenv("ENV"))
 
 
 app = App(
@@ -60,7 +56,7 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel doesn't exist, please double-check the ID you provided.",
         )
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     if pytz.utc.localize(datetime.datetime.utcnow()) >= game.start:
@@ -72,7 +68,7 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel has already begun, sorry.",
         )
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     elif game.canceled:
@@ -84,7 +80,7 @@ def cancel_game_command_handler(
             channel=response_channel,
             text="The game you've requested to cancel was already canceled.",
         )
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     logger.info(f"Canceling game {game_id} by request from {user_id}")
@@ -128,112 +124,9 @@ def serve_new_game_modal(
 
     client.views_open(
         trigger_id=command["trigger_id"],
-        view={
-            "type": "modal",
-            "callback_id": "new_game",
-            "title": {"type": "plain_text", "text": "New Blotto Game"},
-            "submit": {"type": "plain_text", "text": "New Game"},
-            "close": {
-                "type": "plain_text",
-                "text": "Cancel",
-            },
-            "blocks": [
-                {
-                    "block_id": "num_rounds",
-                    "type": "input",
-                    "element": {
-                        "action_id": "num_rounds",
-                        "type": "number_input",
-                        "is_decimal_allowed": False,
-                        "initial_value": "3",
-                        "min_value": "1",
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Number of rounds",
-                    },
-                },
-                {
-                    "block_id": "round_length_num",
-                    "type": "input",
-                    "element": {
-                        "action_id": "round_length_num",
-                        "type": "number_input",
-                        "is_decimal_allowed": False,
-                        "initial_value": "1",
-                        "min_value": "1",
-                        "max_value": "60",
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Round Length - Number",
-                    },
-                },
-                {
-                    "block_id": "round_length_unit",
-                    "type": "input",
-                    "element": {
-                        "action_id": "round_length_unit",
-                        "type": "static_select",
-                        "options": [
-                            {
-                                "text": {"type": "plain_text", "text": "Minutes"},
-                                "value": "minutes",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Hours"},
-                                "value": "hours",
-                            },
-                            {
-                                "text": {"type": "plain_text", "text": "Days"},
-                                "value": "days",
-                            },
-                        ],
-                        "initial_option": {
-                            "text": {"type": "plain_text", "text": "Hours"},
-                            "value": "hours",
-                        },
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Round Length - Unit",
-                    },
-                },
-                {"type": "divider"},
-                {
-                    "block_id": "datetime",
-                    "type": "input",
-                    "element": {
-                        "action_id": "datetime",
-                        "type": "datetimepicker",
-                        "initial_date_time": int(
-                            (
-                                datetime.datetime.now() + datetime.timedelta(days=1)
-                            ).timestamp()
-                        ),
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Signup Close",
-                        "emoji": True,
-                    },
-                },
-                {"type": "divider"},
-                {
-                    "block_id": "advertise_to_channels",
-                    "type": "input",
-                    "optional": False,
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Select a channel to advertise the game to",
-                    },
-                    "element": {
-                        "action_id": "advertise_to_channels",
-                        "type": "channels_select",
-                    },
-                },
-            ],
-        },
+        view=views.new_game.load(
+            datetime.datetime.utcnow() + datetime.timedelta(days=1)
+        ),
     )
 
 
@@ -257,7 +150,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_no_game_id,
         )
 
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     game_id = int(command["text"])
@@ -275,7 +168,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_game_doesnt_exist,
         )
 
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     if game.canceled:
@@ -288,7 +181,7 @@ def serve_submission_modal(
             text=messages.general_game_canceled,
         )
 
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     try:
@@ -304,7 +197,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_user_not_in_game,
         )
 
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     try:
@@ -322,7 +215,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_game_inactive,
         )
 
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     logger.info("Serving user submission modal")
@@ -330,77 +223,9 @@ def serve_submission_modal(
         round.id, round.fields, round.soldiers, round.game_id
     )
 
-    view = {
-        "type": "modal",
-        "callback_id": "submit_strategy",
-        "private_metadata": json.dumps({"game_id": game_id, "round_num": round.number}),
-        "title": {"type": "plain_text", "text": "Strategy submission"},
-        "submit": {
-            "type": "plain_text",
-            "text": "Submit",
-        },
-        "close": {
-            "type": "plain_text",
-            "text": "Cancel",
-        },
-        "blocks": [
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "General rules",
-                },
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": messages.general_rules,
-                },
-            },
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "Round rules",
-                },
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": round_obj.RULES,
-                },
-            },
-            {"type": "divider"},
-            {
-                "type": "section",
-                "text": {
-                    "type": "plain_text",
-                    "text": f"You have {round.soldiers} soldiers to distribute amongst {round.fields} fields. Good luck, Major!",
-                },
-            },
-        ]
-        + [
-            {
-                "block_id": f"field-{field_num+1}",
-                "type": "input",
-                "element": {
-                    "type": "plain_text_input",
-                    "action_id": f"field-{field_num + 1}",
-                    "placeholder": {
-                        "type": "plain_text",
-                        "text": "Enter a number of soldiers",
-                    },
-                },
-                "label": {
-                    "type": "plain_text",
-                    "text": f"Field {field_num + 1}",
-                },
-            }
-            for field_num in range(round.fields)
-        ],
-    }
+    view = views.new_submission.load(
+        game_id, round.number, round.soldiers, round.fields, round_obj.RULES
+    )
 
     client.views_open(trigger_id=command["trigger_id"], view=view)
 
@@ -414,36 +239,7 @@ def update_home_tab(client: WebClient, event: dict, logger: logging.Logger):
     # views.publish is the method that your app uses to push a view to the Home tab
     client.views_publish(
         user_id=user_id,
-        view={
-            "type": "home",
-            "callback_id": "home_view",
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*Welcome to your _App's Home_* :tada:",
-                    },
-                },
-                {"type": "divider"},
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "This button won't do much for now but you can set up a listener for it using the `actions()` method and passing its unique `action_id`. See an example in the `examples` folder within your Bolt app.",
-                    },
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "text": {"type": "plain_text", "text": "Click me!"},
-                        }
-                    ],
-                },
-            ],
-        },
+        view=views.app_home.load(),
     )
 
 
@@ -455,7 +251,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     if "raising-hand" not in reacji:
         logger.info("Not a valid signup reacji")
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     logger.info("Signup reaction detected")
@@ -476,7 +272,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     # check if valid response from API
     if not message["ok"]:
         logger.info("SlackAPI did not return a valid response")
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     # single out message content, check that bot sent message and it's a game signup
@@ -485,7 +281,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         "has started a new game of Blotto" not in message["text"]
     ):
         logger.info("Message did not meet criteria for valid signup request")
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     # verify that user did not add accidental duplicate signup
@@ -496,7 +292,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
 
         if user_id in reaction["users"]:
             logger.info("User added duplicate signup request, no further action")
-            if not ENV == Environment.DEV:
+            if not ENV == enums.Environment.DEV:
                 return
 
     game_id = int(message["metadata"]["event_payload"]["game_id"])
@@ -513,7 +309,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_request_error_duplicate.format(game_id=game_id),
             user=user_id,
         )
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
     except NoResultFound:
         logger.info("Verified user has not already signed up")
@@ -530,7 +326,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_request_error_game_started,
             user=user_id,
         )
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     logger.info("Valid user signup request")
@@ -560,7 +356,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 
     if "raising-hand" not in reacji:
         logger.info("Not a relevant reacji, ignoring")
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     logger.info("Signup reaction removal detected")
@@ -581,7 +377,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     # check if valid response from API
     if not message["ok"]:
         logger.info("SlackAPI did not return a valid response")
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     # single out message content, check that bot sent message and that it was for a game signup
@@ -590,7 +386,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
         "has started a new game of Blotto" not in message["text"]
     ):
         logger.info("Message did not meet criteria for valid signup withdrawal request")
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     # verify that user did not remove accidental duplicate signup
@@ -601,7 +397,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
 
         if user_id in reaction["users"]:
             logger.info("User removed duplicate signup request, no further action")
-            if not ENV == Environment.DEV:
+            if not ENV == enums.Environment.DEV:
                 return
 
     logger.info("Valid user signup removal request")
@@ -621,7 +417,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_remove_request_error_no_signup.format(game_id=game_id),
             user=user_id,
         )
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     db_utils.remove_user_from_game(user_id, game_id)
@@ -650,12 +446,12 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             logger.info("Not enough participants, canceling game")
             db_utils.cancel_game(game_id)
             logger.info("Game canceled successfully")
-            if not ENV == Environment.DEV:
+            if not ENV == enums.Environment.DEV:
                 return
 
         elif game.canceled:
             logger.info("Game was canceled, no need to announce")
-            if not ENV == Environment.DEV:
+            if not ENV == enums.Environment.DEV:
                 return
 
         logger.info("Posting game announcement")
@@ -847,7 +643,7 @@ def handle_strategy_submission(
     if errors:
         ack(response_action="errors", errors=errors)
 
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     round_obj = blotto.RoundLibrary.load_round(
@@ -865,14 +661,14 @@ def handle_strategy_submission(
             },
         )
 
-        if not ENV == Environment.DEV:
+        if not ENV == enums.Environment.DEV:
             return
 
     else:
         if field_errors:
             ack(response_action="errors", errors=field_errors)
 
-            if not ENV == Environment.DEV:
+            if not ENV == enums.Environment.DEV:
                 return
 
     logger.info("Valid submission, accepted")
@@ -977,14 +773,14 @@ if __name__ == "__main__":
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
     try:
-        if ENV == Environment.PROD:
+        if ENV == enums.Environment.PROD:
             app.client.chat_postMessage(
                 token=BOT_TOKEN, channel="testing", text="Back online"
             )
         handler.start()
     except KeyboardInterrupt:
         app.logger.info("Shutting down")
-        if ENV == Environment.PROD:
+        if ENV == enums.Environment.PROD:
             app.client.chat_postMessage(
                 token=BOT_TOKEN, channel="testing", text="Shutting down temporarily"
             )
