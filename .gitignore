@@ -132,3 +132,6 @@ dmypy.json
 *.db
 .vscode/
 speed_rounds/
+
+# scratch files for testing
+scratch/
