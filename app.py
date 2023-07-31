@@ -89,11 +89,6 @@ logging.basicConfig(level=logging.DEBUG)
 #     logger.info("Game canceled successfully")
 
 
-@app.command("/modify_submission")
-def modify_submission_command_handler(ack: Ack, respond: Respond, command: dict):
-    pass
-
-
 @app.command("/new_game")
 def serve_new_game_modal(
     ack: Ack, command: dict, client: WebClient, logger: logging.Logger
