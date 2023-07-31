@@ -70,22 +70,6 @@ general_rules = """
 > • No collusion!
 """
 
-submit_strategy_error_no_game_id = """
-Please provide a game ID to submit your strategy.
-"""
-
-submit_strategy_error_user_not_in_game = """
-It looks like you're not signed up for that game, please double check the game ID you provided.
-"""
-
-submit_strategy_error_game_inactive = """
-Sorry, the game you specified isn't active right now. Please check the start and end times using `/blotto_game_info`.
-"""
-
-submit_strategy_error_game_doesnt_exist = """
-The game you specified doesn't exist, please double-check the ID.
-"""
-
-general_game_canceled = """
-I'm sorry, the game you specified was canceled.
+submit_strategy_error_not_in_active_game = """
+It looks like you're not signed up for any active games.
 """

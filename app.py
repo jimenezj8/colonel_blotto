@@ -14,6 +14,7 @@ from sqlalchemy.exc import NoResultFound
 import blotto
 import db_utils
 import messages
+import models
 import views
 from enums import Environment
 
@@ -125,7 +126,7 @@ def serve_new_game_modal(
     )
 
 
-@app.command("/submit_strategy")
+@app.command("/blotto_submission")
 def serve_submission_modal(
     ack: Ack, command: dict, client: WebClient, logger: logging.Logger
 ):
@@ -134,95 +135,37 @@ def serve_submission_modal(
     user_id = command["user_id"]
     channel_id = command["channel_id"]
 
-    if not command["text"]:
-        logger.info("User did not provide a game ID")
-        logger.info("Messaging user")
+    logger.info(f"Querying games for user {user_id}")
+    games = db_utils.get_user_active_games(user_id)
 
-        client.chat_postEphemeral(
-            token=BOT_TOKEN,
-            channel=channel_id,
-            user=user_id,
-            text=messages.submit_strategy_error_no_game_id,
+    if not games:
+        logger.info(
+            "User attempting to submit games while not "
+            "signed up for any active ones, messaging user"
         )
 
-        if not ENV == enums.Environment.DEV:
-            return
-
-    game_id = int(command["text"])
-
-    try:
-        game = db_utils.get_game(game_id)
-    except NoResultFound:
-        logger.info("The specified game doesn't exist")
-        logger.info("Messaging user")
-
         client.chat_postEphemeral(
-            token=BOT_TOKEN,
             channel=channel_id,
             user=user_id,
-            text=messages.submit_strategy_error_game_doesnt_exist,
-        )
-
-        if not ENV == enums.Environment.DEV:
-            return
-
-    if game.canceled:
-        logger.info("Game specified has been canceled, messaging user")
-
-        client.chat_postEphemeral(
-            token=BOT_TOKEN,
-            channel=channel_id,
-            user=user_id,
-            text=messages.general_game_canceled,
-        )
-
-        if not ENV == enums.Environment.DEV:
-            return
-
-    try:
-        db_utils.check_participation(user_id, game_id)
-    except NoResultFound:
-        logger.info(f"{user_id} is not signed up for game {game_id}")
-        logger.info("Messaging user")
-
-        client.chat_postEphemeral(
-            token=BOT_TOKEN,
-            channel=channel_id,
-            user=user_id,
-            text=messages.submit_strategy_error_user_not_in_game,
-        )
-
-        if not ENV == enums.Environment.DEV:
-            return
-
-    try:
-        round = db_utils.get_active_round(
-            game_id, pytz.utc.localize(datetime.datetime.utcnow())
-        )
-    except NoResultFound:
-        logger.info("Game specified isn't currently active")
-        logger.info("Messaging user")
-
-        client.chat_postEphemeral(
-            token=BOT_TOKEN,
-            channel=channel_id,
-            user=user_id,
-            text=messages.submit_strategy_error_game_inactive,
+            text=messages.submit_strategy_error_not_in_active_game,
         )
 
         if ENV == Environment.PROD:
             return
 
-    logger.info("Serving user submission modal")
-    round_obj = blotto.RoundLibrary.load_round(
-        round.id, round.fields, round.soldiers, round.game_id
-    )
+        else:
+            games = [
+                models.Game(
+                    id="test",
+                    round_length="timedelta",
+                    num_rounds="rounds",
+                    start="start time",
+                )
+            ]
 
-    view = views.new_submission.load(
-        game_id, round.number, round.soldiers, round.fields, round_obj.RULES
+    client.views_open(
+        trigger_id=command["trigger_id"], view=views.new_submission.load(games)
     )
-
-    client.views_open(trigger_id=command["trigger_id"], view=view)
 
 
 @app.event("app_home_opened")
