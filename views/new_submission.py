@@ -1,12 +1,44 @@
 import json
+from typing import Iterable
 
 from slack_sdk.models import blocks
 from slack_sdk.models.views import View
 
 import messages
+from models import Game
+from utils import DateTimeShortPretty
 
 
-def load(
+def load(games: Iterable[Game]):
+    game_options = [
+        blocks.Option(
+            value=f"{game.id}",
+            label=f"Game {game.id} - Began {DateTimeShortPretty(game.start).value}",
+        )
+        for game in games
+    ]
+
+    return View(
+        type="modal",
+        callback_id="strategy_submission_select_game_view",
+        title="Select game",
+        submit="Select",
+        close="Cancel",
+        blocks=[
+            blocks.InputBlock(
+                label="Active Games",
+                block_id="strategy_submission_select_game_block",
+                element=blocks.StaticSelectElement(
+                    action_id="select_game",
+                    options=game_options,
+                    initial_option=game_options[0],
+                ),
+            )
+        ],
+    )
+
+
+def update(
     game_id: int,
     round_num: int,
     round_soldiers: int,
