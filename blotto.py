@@ -149,11 +149,10 @@ class BlottoRound:
 
 class TestRound(BlottoRound):
     LIBRARY_ID = 0
-    RULES = """
-> This is an example of round rules.
-> • This is a bullet point
-> • A validation error should appear on Field 1 if the input value is not 8
-> • Otherwise, the submission will succeed
+    RULES = """This is an example of round rules.
+• This is a bullet point
+• A validation error should appear on Field 1 if the input value is not 8
+• Otherwise, the submission will succeed
 """  # noqa: E501
 
     @classmethod
