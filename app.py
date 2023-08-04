@@ -6,7 +6,7 @@ import sys
 import time
 
 import pytz
-from slack_bolt import Ack, App, BoltContext, Respond
+from slack_bolt import Ack, App, BoltContext
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.web.client import WebClient
 from sqlalchemy.exc import NoResultFound
