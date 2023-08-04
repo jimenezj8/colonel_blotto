@@ -228,28 +228,42 @@ class DecreasingSoldiers(BlottoRound):
 
         return errors
 
-    def update_results(self):
-        """
-        Must be an instance of a round that is tied to a game instance.
-
-        Will pull submissions from the database, calculate each user's score, and push the scores to the round_result table.
-        """
-        submissions = db_utils.get_submissions_dataframe(self.game_id)
-
 
 class RoundLibrary:
-    ROUND_MAP = {DecreasingSoldiers.ID: DecreasingSoldiers}
+    ROUND_MAP = {round.LIBRARY_ID: round for round in BlottoRound.__subclasses__()}
 
     @classmethod
     def load_round(
-        cls, round_id: int, fields: int, soldiers: int, game_id: int | None = None
-    ):
-        """
-        Must provide a round ID, number of fields, and soldiers.
+        cls,
+        game_round: Optional[GameRound] = None,
+        game_id: Optional[int] = None,
+        round_number: Optional[int] = None,
+    ) -> BlottoRound:
+        """Returns the appropriate BlottoRound subclass.
 
-        Game ID is optional, and useful for object instances that will be used to calculate results.
+        Requires either:
+        - GameRound instance
+        - game_id AND round_number
         """
-        return cls.ROUND_MAP[round_id](fields, soldiers, game_id)
+        if game_round is not None:
+            pass
+        elif game_id is not None and round_number is not None:
+            game_round = db_utils.get_game_round(game_id, round_number)
+        else:
+            raise ValueError(
+                "Please provide either: game_round OR (game_id AND round_number)"
+            )
+
+        blotto_round = cls.ROUND_MAP[game_round.library_id](
+            game_round.fields,
+            game_round.soldiers,
+            game_id=game_round.game_id,
+            number=game_round.number,
+            start=game_round.start,
+            end=game_round.end,
+        )
+
+        return blotto_round
 
     @classmethod
     def get_random(cls):
