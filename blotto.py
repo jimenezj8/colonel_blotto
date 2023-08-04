@@ -1,47 +1,120 @@
 import datetime
 import logging
 import random
+from typing import Iterable, Optional, Self
+
+from slack_sdk.models.views import ViewStateValue
 
 import db_utils
-from models import Engine
-
+from exc import *  # noqa: F403
+from models import Game, GameRound
 
 logging.basicConfig(level=logging.INFO)
 
 
 class BlottoRound:
+    """Framework for implementing new rules, operating within the application,
+    and persisting data to the DB.
+
+    BlottoRound is the application-driving metaclass for rounds. This metaclass
+    defines what each new type of round must be able to do and what characteristics
+    must be provided. A BlottoRound cannot exist without at least a number of
+    fields and soldiers.
+
+    Equally importantly, a BlottoRound is responsible for translating to and from
+    instances of GameRound, which represent state for a particular Game. Instantiating
+    from an existing GameRound will load the BlottoRound with additional attributes
+    defined by the SQLAlchemy model.
+    """
+
+    LIBRARY_ID = None
+    RULES = None
+
     def __init__(
         self,
-        fields: int | None,
-        soldiers: int | None,
-        field_bounds: tuple[int],
-        soldier_bounds: tuple[int],
-        game_id: int | None = None,
+        fields: int,
+        soldiers: int,
+        *,
+        game_id: Optional[int] = None,
+        number: Optional[int] = None,
+        start: Optional[datetime.datetime] = None,
+        end: Optional[datetime.datetime] = None,
     ):
-        self._field_bounds = field_bounds
-        self._soldier_bounds = soldier_bounds
+        """
+        Instances of `BlottoRound` require at least that
+        `soldiers` and `fields` be defined.
 
-        if fields is None and soldiers is None:
-            fields = self.random_fields()
-            soldiers = self.random_soldiers()
-
-        elif fields is not None and soldiers is not None:
-            pass
-
-        else:
-            raise ValueError(
-                "If one of [fields, soldiers] is provided, both must be provided."
-            )
+        Use the classmethods `from_*` to create instances.
+        """
 
         self._fields = fields
         self._soldiers = soldiers
+
         self._game_id = game_id
+        self._number = number
+        self._start = start
+        self._end = end
 
-    def random_fields(self) -> int:
-        return random.randint(*self.field_bounds)
+        must_implement = ["LIBRARY_ID", "RULES"]
+        missing = []
+        for attr in must_implement:
+            try:
+                getattr(self, attr)
+            except AttributeError:
+                missing.append(attr)
 
-    def random_soldiers(self) -> int:
-        return random.randint(*self.soldier_bounds)
+        if missing:
+            raise BlottoRoundNotImplementedError(missing)  # noqa: F405
+
+    @classmethod
+    def from_new(
+        cls, field_bounds: tuple[int, int], soldier_bounds: tuple[int, int]
+    ) -> Self:
+        fields = cls._random_fields(*field_bounds)
+        soldiers = cls._random_soldiers(*soldier_bounds)
+
+        return cls(fields, soldiers)
+
+    def to_game_round(self) -> GameRound:
+        """Returns a GameRound instance.
+
+        Raises if the BlottoRound instance does not define all the necessary
+        GameRound attributes.
+        """
+        attrs = [
+            "game_id",
+            "number",
+            "library_id",
+            "start",
+            "end",
+            "fields",
+            "soldiers",
+        ]
+        vals = {}
+        missing = []
+        for key in attrs:
+            val = getattr(self, key, None)
+            vals[key] = val
+
+            if val is None:
+                missing.append(key)
+
+        if missing:
+            raise BlottoRoundToGameRoundTranslationError(missing)  # noqa: F405
+
+        return GameRound(**vals)
+
+    @classmethod
+    def check_field_rules(
+        cls, input_blocks: dict[str, dict[str, ViewStateValue]]
+    ) -> dict[str, str]:
+        """Every BlottoRound must implement check_field_rules for user submission
+        validation.
+
+        This method takes the input blocks from the submission view and returns a
+        dictionary where keys are block_id and values are validation messages.
+        """
+        raise NotImplementedError
 
     @property
     def fields(self):
@@ -56,12 +129,46 @@ class BlottoRound:
         return self._game_id
 
     @property
-    def field_bounds(self):
-        return self._field_bounds
+    def number(self):
+        return self._number
 
     @property
-    def soldier_bounds(self):
-        return self._soldier_bounds
+    def start(self):
+        return self._start
+
+    @property
+    def end(self):
+        return self._end
+
+    def _random_fields(self, field_bounds: tuple[int, int]) -> int:
+        return random.randint(*field_bounds)
+
+    def _random_soldiers(self, soldier_bounds: tuple[int, int]) -> int:
+        return random.randint(*soldier_bounds)
+
+
+class TestRound(BlottoRound):
+    LIBRARY_ID = 0
+    RULES = """
+> This is an example of round rules.
+> • This is a bullet point
+> • A validation error should appear on Field 1 if the input value is not 8
+> • Otherwise, the submission will succeed
+"""  # noqa: E501
+
+    @classmethod
+    def check_field_rules(
+        self, input_blocks: dict[str, dict[str, ViewStateValue]]
+    ) -> dict[str, str]:
+        errors = {}
+
+        for i, (block_id, block) in enumerate(input_blocks.items()):
+            state_value = block[block_id.replace("block", "element")]
+
+            if i == 0 and int(state_value.value) != 8:
+                errors[block_id] = "Field 1 must have 8 soldiers"
+
+        return errors
 
 
 class DecreasingSoldiers(BlottoRound):
