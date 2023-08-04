@@ -20,6 +20,7 @@ from enums import Environment
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BOT_MEMBER_ID = "U03LWG7NAAY"
+USER_ID = os.getenv("DEVELOPER_MEMBER_ID")
 
 
 # if ENV == "development" validation will still allow the requested
@@ -150,18 +151,7 @@ def serve_submission_modal(
             text=messages.submit_strategy_error_not_in_active_game,
         )
 
-        if ENV == Environment.PROD:
-            return
-
-        else:
-            games = [
-                models.Game(
-                    id="test",
-                    round_length="timedelta",
-                    num_rounds="rounds",
-                    start="start time",
-                )
-            ]
+        return
 
     client.views_open(
         trigger_id=command["trigger_id"], view=views.new_submission.load(games)
@@ -704,7 +694,37 @@ def handle_new_game_submission(
 
 
 if __name__ == "__main__":
-    db_utils.MetaData.create_all()
+    if ENV == Environment.DEV:
+        models.MetaData.drop_all(db_utils.engine)
+
+    models.MetaData.create_all(db_utils.engine)
+
+    if ENV == Environment.DEV and os.getenv("CREATE_TEST_DATA") == "true":
+        game_start = datetime.datetime.utcnow()
+        records = [
+            models.Game(
+                id=0,
+                start=game_start,
+                end=game_start + datetime.timedelta(days=1),
+                num_rounds=3,
+                round_length=datetime.timedelta(hours=8),
+                canceled=False,
+            ),
+            models.GameRound(
+                game_id=0,
+                number=1,
+                library_id=0,
+                start=game_start,
+                end=game_start + datetime.timedelta(hours=8),
+                fields=5,
+                soldiers=100,
+            ),
+            models.Participant(
+                game_id=0,
+                user_id=USER_ID,
+            ),
+        ]
+        db_utils.create_records(records)
 
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
