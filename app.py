@@ -91,29 +91,35 @@ logging.basicConfig(level=logging.DEBUG)
 #     logger.info("Game canceled successfully")
 
 
-@app.command("/new_game")
+@app.command("/blotto_game")
 def serve_new_game_modal(
     ack: Ack, command: dict, client: WebClient, logger: logging.Logger
 ):
     """
-    This function will create a new game of Blotto, which will consist of X number of rounds.
-    There will be a preset of possible rules for a round, and they will be randomly selected from with no replacement.
+    This function will create a new game of Blotto, which will
+    consist of X number of rounds. There will be a preset of
+    possible rules for a round, and they will be randomly
+    selected from with no replacement.
 
     Several actions must be performed for recordkeeping of this new game:
     - A table containing gameIDs will update with a new entry
         - This table will look like:
             game_id (int) | round_clock (interval) | num_rounds (int)
 
-    - A message will be posted to a channel (TBD) advertising the game for users to sign up
+    - A message will be posted to a channel (TBD) advertising the game for
+    users to sign up
         - A specific emoji will be requested for users to indicate interest
         - A monitor will be created to check if users add/remove a reaction
 
-    - A table containing user+game pairs will update with signups from users that wish to participate in a new game
-        - Signups will be controlled by monitoring reactions to a published message as indicated above
+    - A table containing user+game pairs will update with signups from
+    users that wish to participate in a new game
+        - Signups will be controlled by monitoring reactions to a published
+        message as indicated above
         - Adding a reaction will insert a new record
         - Removing a reaction will remove an existing record
 
-    - A table containing results for each round of the game will be created. It will be named in accordance with the gameID
+    - A table containing results for each round of the game will be created.
+    It will be named in accordance with the gameID
     """
     ack()
 
