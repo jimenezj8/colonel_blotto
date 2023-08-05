@@ -205,6 +205,14 @@ class TestRound(BlottoRound):
 
         return errors
 
+    @classmethod
+    def _random_fields(cls) -> int:
+        return 5
+
+    @classmethod
+    def _random_soldiers(cls) -> int:
+        return 100
+
 
 class DecreasingSoldiers(BlottoRound):
     """
