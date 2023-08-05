@@ -1,7 +1,3 @@
-def format_timestamp(timestamp: int) -> str:
-    return f"<!date^{timestamp}^{{date_short_pretty}} at {{time}}| >"
-
-
 signup_request_error_duplicate = """
 You have already signed up for game {game_id}. Glad you're excited, though!
 """

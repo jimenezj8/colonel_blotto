@@ -16,6 +16,7 @@ import blotto
 import db_utils
 import messages
 import models
+import utils
 import views
 from enums import Environment
 
@@ -275,7 +276,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         channel=message_channel,
         text=messages.signup_request_success.format(
             game_id=game_id,
-            game_start=messages.format_timestamp(int(game_start.timestamp())),
+            game_start=utils.DateTimeShortPretty(game_start),
         ),
         user=user_id,
     )
@@ -421,7 +422,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             text=messages.round_start_announcement.format(
                 game_id=game_id,
                 round_num=round.number,
-                round_end=messages.format_timestamp(int(round.end.timestamp())),
+                round_end=utils.DateTimeShortPretty(round.end),
                 round_rules=round_obj.RULES,
             ),
         )
@@ -665,7 +666,7 @@ def handle_new_game_submission(
             num_rounds=num_rounds,
             round_length=round_length,
             game_id=game.id,
-            game_start=messages.format_timestamp(int(signup_close.timestamp())),
+            game_start=utils.DateTimeShortPretty(signup_close),
         ),
         metadata={
             "event_type": "game_announced",
