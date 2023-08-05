@@ -1,7 +1,7 @@
 import datetime
 import logging
 import random
-from typing import Iterable, Optional, Self
+from typing import Optional, Self
 
 from slack_sdk.models.views import ViewStateValue
 
