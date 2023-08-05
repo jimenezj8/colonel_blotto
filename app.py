@@ -705,7 +705,7 @@ if __name__ == "__main__":
 
     models.MetaData.create_all(db_utils.engine)
 
-    if ENV == Environment.DEV and os.getenv("CREATE_TEST_DATA") == "true":
+    if ENV == Environment.DEV and os.getenv("CREATE_TEST_DATA").lower() == "true":
         game_start = datetime.datetime.utcnow()
         records = [
             models.Game(
