@@ -310,8 +310,8 @@ class RoundLibrary:
         return blotto_round
 
     @classmethod
-    def get_random(cls):
-        return random.choice(list(cls.ROUND_MAP.values()))()
+    def get_random(cls) -> type[BlottoRound]:
+        return random.choice(list(cls.ROUND_MAP.values()))
 
 
 class GameFactory:
@@ -340,14 +340,14 @@ class GameFactory:
 
         new_rounds = []
         for round_num in range(1, num_rounds + 1):
-            blotto_round = RoundLibrary.get_random()
+            blotto_round = RoundLibrary.get_random().from_new()
             round_start = start + round_length * (round_num - 1)
             round_end = round_start + round_length
 
             new_round = GameRound(
                 game_id=new_game.id,
                 number=round_num,
-                library_id=blotto_round.ID,
+                library_id=blotto_round.LIBRARY_ID,
                 start=round_start,
                 end=round_end,
                 fields=blotto_round.fields,
