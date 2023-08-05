@@ -271,34 +271,49 @@ class RoundLibrary:
 
 
 class GameFactory:
-    @classmethod
+    @staticmethod
     def new_game(
-        cls,
         num_rounds: int,
         round_length: datetime.timedelta,
         start: datetime.datetime,
-    ) -> int:
-        game_id = db_utils.create_new_game(num_rounds, round_length, start)
+    ) -> Game:
+        """Inserts a new Game record and associated GameRound records to the DB.
+        Returns the new Game object.
+
+        args:
+        - num_rounds: the number of GameRounds to be created for the new Game
+        - round_length: the interval allotted to each GameRound from the rules
+        announcement to posting results
+        - start: the end of the game signup window, which coincides with the
+        time that the first round's rules will be posted
+        """
+        new_game = Game(
+            start=start,
+            end=(start + (round_length * num_rounds)),
+            num_rounds=num_rounds,
+            round_length=round_length,
+        )
 
         new_rounds = []
-        for round_num in range(num_rounds):
-            new_round = RoundLibrary.get_random()
-            new_rounds.append(
-                {
-                    "id": new_round.ID,
-                    "game_id": game_id,
-                    "number": round_num + 1,
-                    "start": start + round_length * round_num,
-                    "end": start + round_length * (round_num + 1),
-                    "fields": new_round.fields,
-                    "soldiers": new_round.soldiers,
-                    "canceled": False,
-                }
+        for round_num in range(1, num_rounds + 1):
+            blotto_round = RoundLibrary.get_random()
+            round_start = start + round_length * (round_num - 1)
+            round_end = round_start + round_length
+
+            new_round = GameRound(
+                game_id=new_game.id,
+                number=round_num,
+                library_id=blotto_round.ID,
+                start=round_start,
+                end=round_end,
+                fields=blotto_round.fields,
+                soldiers=blotto_round.soldiers,
             )
+            new_rounds.append(new_round)
 
-        db_utils.create_new_rounds(new_rounds)
+        db_utils.create_records([new_game] + new_rounds)
 
-        return game_id
+        return new_game.id
 
 
 def update_game_results(game_id: int) -> None:
