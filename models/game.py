@@ -12,7 +12,9 @@ class Game(Base):
     end = orm.mapped_column(sa.DateTime(timezone=True), nullable=False)
     num_rounds = orm.mapped_column(sa.Integer, nullable=False)
     round_length = orm.mapped_column(sa.Interval, nullable=False)
-    canceled = orm.mapped_column(sa.Boolean, nullable=False)
+    announcement_channel = orm.mapped_column(sa.Text, nullable=True)
+    announcement_ts = orm.mapped_column(sa.DateTime(timezone=True), nullable=True)
+    canceled = orm.mapped_column(sa.Boolean, nullable=False, default=False)
 
     def __repr__(self):
         return (

@@ -649,7 +649,7 @@ def handle_new_game_submission(
 
     logger.info("Valid params, creating game instance")
 
-    game_id = blotto.GameFactory.new_game(num_rounds, round_length, signup_close)
+    game = blotto.GameFactory.new_game(num_rounds, round_length, signup_close)
 
     logger.info("Game created, announcing")
 
@@ -657,24 +657,30 @@ def handle_new_game_submission(
         "selected_channel"
     ]
 
-    client.chat_postMessage(
+    response = client.chat_postMessage(
         token=BOT_TOKEN,
         channel=selected_channel,
         text=messages.new_game_announcement.format(
             user_id=context["user_id"],
             num_rounds=num_rounds,
             round_length=round_length,
-            game_id=game_id,
+            game_id=game.id,
             game_start=messages.format_timestamp(int(signup_close.timestamp())),
         ),
         metadata={
             "event_type": "game_announced",
             "event_payload": {
-                "game_id": game_id,
+                "game_id": game.id,
             },
         },
         unfurl_links=False,
     )
+
+    game.announcement_channel = selected_channel
+    game.announcement_ts = datetime.datetime.fromtimestamp(float(response.data["ts"]))
+
+    db_utils.update_records([game])
+
     time.sleep(1)
 
     logger.info("Game announced, scheduling signup close action")
@@ -686,7 +692,7 @@ def handle_new_game_submission(
         metadata={
             "event_type": "game_start",
             "event_payload": {
-                "game_id": game_id,
+                "game_id": game.id,
                 "channel_id": selected_channel,
             },
         },
