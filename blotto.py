@@ -337,6 +337,7 @@ class GameFactory:
             num_rounds=num_rounds,
             round_length=round_length,
         )
+        db_utils.create_records([new_game])
 
         new_rounds = []
         for round_num in range(1, num_rounds + 1):
@@ -355,9 +356,9 @@ class GameFactory:
             )
             new_rounds.append(new_round)
 
-        db_utils.create_records([new_game] + new_rounds)
+        db_utils.create_records(new_rounds)
 
-        return new_game.id
+        return new_game
 
 
 def update_game_results(game_id: int) -> None:
