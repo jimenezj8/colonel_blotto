@@ -6,7 +6,7 @@ from slack_sdk.models.views import View
 
 import messages
 from models import Game
-from utils import DateTimeShortPretty
+from slack_utils import DateTimeShortPretty
 
 
 def load(games: Iterable[Game]):
