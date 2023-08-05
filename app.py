@@ -8,6 +8,7 @@ import time
 import pytz
 from slack_bolt import Ack, App, BoltContext
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from slack_sdk.models.views import View
 from slack_sdk.web.client import WebClient
 from sqlalchemy.exc import NoResultFound
 
@@ -544,78 +545,73 @@ def ignore_messages(ack: Ack, logger: logging.Logger):
     logger.info("Message posted somewhere, nobody cares")
 
 
-@app.view("submit_strategy")
-def handle_strategy_submission(
+@app.view("strategy_submission_select_game_view")
+def update_strategy_submission_modal_with_field_inputs(
     ack: Ack,
     view: dict,
-    client: WebClient,
-    context: BoltContext,
     logger: logging.Logger,
 ):
-    user_id = context["user_id"]
-    channel_id = context["user_id"]
+    view_state = view["state"]["values"]
+    element = view_state["strategy_submission_select_game_block"]["select_game"]
 
-    metadata = json.loads(view["private_metadata"])
-    game_id = metadata["game_id"]
-    round_num = metadata["round_num"]
+    game_id = element["selected_option"]["value"]
 
-    round = db_utils.get_round(game_id, round_num)
+    game_round = db_utils.get_active_round(game_id)
 
-    inputs = view["state"]["values"]
-    fields = [
-        inputs[f"field-{i+1}"][f"field-{i+1}"]["value"] for i in range(round.fields)
-    ]
-    errors = {}
-    for i, soldiers in enumerate(fields):
-        try:
-            fields[i] = int(soldiers)
-        except ValueError:
-            errors[f"field-{i+1}"] = "Argument must be an integer"
+    if not game_round:
+        logger.fatal("Failed to find the active round for the indicated game")
+        logger.info("Closing all strategy submission views")
+        ack(response_action="clear")
+        return
+
+    blotto_round = blotto.RoundLibrary.load_round(game_round)
+
+    new_view = views.new_submission.update(
+        game_id,
+        blotto_round.number,
+        blotto_round.soldiers,
+        blotto_round.fields,
+        blotto_round.RULES,
+    )
+
+    logger.info("Serving user new view to provide submission")
+
+    ack(response_action="push", view=new_view)
+
+
+@app.view("strategy_submission_inputs_view")
+def process_strategy_submission(
+    ack: Ack,
+    client: WebClient,
+    logger: logging.Logger,
+    view: dict,
+    context,
+):
+    logger.info("User submitted strategy")
+
+    view: View = View(**view)
+    metadata = json.loads(view.private_metadata)
+
+    blotto_round = blotto.RoundLibrary.load_round(
+        game_id=metadata["game_id"], round_number=metadata["round_num"]
+    )
+
+    errors = blotto_round.check_field_rules(view.state.values)
 
     if errors:
+        logger.error("Validation errors in submission, update user view")
+        logger.info(errors)
         ack(response_action="errors", errors=errors)
+        return
 
-        if not ENV == enums.Environment.DEV:
-            return
+    ack(response_action="clear")
 
-    round_obj = blotto.RoundLibrary.load_round(
-        round.id, round.fields, round.soldiers, round.game_id
-    )
-    try:
-        field_errors = round_obj.check_field_rules(fields)
-
-    except ValueError:
-        ack(
-            response_action="errors",
-            errors={
-                f"field-{i+1}": "Total soldier count is too high"
-                for i in range(round.fields)
-            },
-        )
-
-        if not ENV == enums.Environment.DEV:
-            return
-
-    else:
-        if field_errors:
-            ack(response_action="errors", errors=field_errors)
-
-            if not ENV == enums.Environment.DEV:
-                return
-
-    logger.info("Valid submission, accepted")
-    ack()
-
-    timestamp = pytz.utc.localize(datetime.datetime.utcnow())
-    db_utils.submit_user_strategy(game_id, round_num, user_id, fields, timestamp)
-
-    logger.info("Messaging user")
+    # TODO: persist submission to DB
 
     client.chat_postEphemeral(
-        token=BOT_TOKEN,
-        channel=channel_id,
-        user=user_id,
-        text="Successfully submitted!",
+        channel=context["user_id"],
+        user=context["user_id"],
+        text="Strategy accepted!",
     )
 
 
