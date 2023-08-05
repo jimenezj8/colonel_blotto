@@ -194,7 +194,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     message_ts = event["item"]["ts"]
     user_id = event["user"]
 
-    message = client.conversations_history(
+    response = client.conversations_history(
         token=BOT_TOKEN,
         channel=message_channel,
         oldest=message_ts,
@@ -204,12 +204,12 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     )
 
     # check if valid response from API
-    if not message["ok"]:
+    if not response["ok"]:
         logger.info("SlackAPI did not return a valid response")
         return
 
     # single out message content, check that bot sent message and it's a game signup
-    message = message["messages"][0]
+    message = response["messages"][0]
     if (not message.get("bot_id") == client.auth_test()["bot_id"]) or (
         "has started a new game of Blotto" not in message["text"]
     ):
