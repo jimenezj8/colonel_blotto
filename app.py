@@ -707,37 +707,41 @@ if __name__ == "__main__":
 
     models.MetaData.create_all(db_utils.engine)
 
-    if ENV == Environment.DEV and os.getenv("CREATE_TEST_DATA").lower() == "true":
-        game_start = datetime.datetime.utcnow()
-        records = [
-            models.Game(
-                id=0,
-                start=game_start,
-                end=game_start + datetime.timedelta(days=1),
-                num_rounds=3,
-                round_length=datetime.timedelta(hours=8),
-                canceled=False,
-            ),
-            models.GameRound(
-                game_id=0,
-                number=1,
-                library_id=0,
-                start=game_start,
-                end=game_start + datetime.timedelta(hours=8),
-                fields=5,
-                soldiers=100,
-            ),
-            models.Participant(
-                game_id=0,
-                user_id=USER_ID,
-            ),
-        ]
-        db_utils.create_records(records)
+    if ENV == Environment.DEV:
+        blotto.RoundLibrary.ROUND_MAP = {0: blotto.TestRound}
+
+        if os.getenv("CREATE_TEST_DATA").lower() == "true":
+            game_start = datetime.datetime.utcnow()
+            records = [
+                models.Game(
+                    id=0,
+                    start=game_start,
+                    end=game_start + datetime.timedelta(days=1),
+                    num_rounds=3,
+                    round_length=datetime.timedelta(hours=8),
+                    canceled=False,
+                ),
+                models.GameRound(
+                    game_id=0,
+                    number=1,
+                    library_id=0,
+                    start=game_start,
+                    end=game_start + datetime.timedelta(hours=8),
+                    fields=5,
+                    soldiers=100,
+                ),
+                models.Participant(
+                    game_id=0,
+                    user_id=USER_ID,
+                ),
+            ]
+            db_utils.create_records(records)
 
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
     try:
         if ENV == Environment.PROD:
+            blotto.RoundLibrary.ROUND_MAP.pop(0)
             app.client.chat_postMessage(
                 token=BOT_TOKEN, channel="testing", text="Back online"
             )
