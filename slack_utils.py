@@ -16,7 +16,12 @@ class DatetimeFormats(Enum):
 
 class SlackDatetime:
     def __init__(self, timestamp: datetime.datetime, format_string: str):
-        self.value = f"<!date^{int(timestamp.timestamp())}^{format_string}>"
+        self.value = (
+            f"<!date^{int(timestamp.timestamp())}^{format_string}| {timestamp}>"
+        )
+
+    def __repr__(self):
+        return self.value
 
 
 class DateShortPretty(SlackDatetime):
