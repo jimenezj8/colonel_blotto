@@ -6,11 +6,12 @@ import sys
 import time
 
 import pytz
+from psycopg2.errors import UniqueViolation
 from slack_bolt import Ack, App, BoltContext
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.models.views import View
 from slack_sdk.web.client import WebClient
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import IntegrityError, NoResultFound
 
 import blotto
 import db_utils
@@ -195,63 +196,17 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     message_ts = event["item"]["ts"]
     user_id = event["user"]
 
-    response = client.conversations_history(
-        token=BOT_TOKEN,
-        channel=message_channel,
-        oldest=message_ts,
-        inclusive=True,
-        limit=1,
-        include_all_metadata=True,
-    )
+    try:
+        game = db_utils.get_announcement_game(
+            message_channel,
+            datetime.datetime.fromtimestamp(float(message_ts)),
+        )
+    except NoResultFound:
+        logger.info("Reaction added to message that is not game announcement, ignoring")
 
-    # check if valid response from API
-    if not response["ok"]:
-        logger.info("SlackAPI did not return a valid response")
         return
 
-    # single out message content, check that bot sent message and it's a game signup
-    message = response["messages"][0]
-    if (not message.get("bot_id") == client.auth_test()["bot_id"]) or (
-        "has started a new game of Blotto" not in message["text"]
-    ):
-        logger.info("Message did not meet criteria for valid signup request")
-        if not ENV == Environment.DEV:
-            return
-
-    # verify that user did not add accidental duplicate signup
-    other_reactions = message.get("reactions", [])
-    for reaction in other_reactions:
-        if "raising-hand" not in reaction["name"] or reaction["name"] == reacji:
-            continue
-
-        if user_id in reaction["users"]:
-            logger.info("User added duplicate signup request, no further action")
-            if not ENV == Environment.DEV:
-                return
-
-    game_id = int(message["metadata"]["event_payload"]["game_id"])
-
-    try:
-        db_utils.check_participation(user_id, game_id)
-
-        logger.info("User already signed up for game, request denied")
-        logger.info("Messaging user")
-
-        client.chat_postEphemeral(
-            token=BOT_TOKEN,
-            channel=message_channel,
-            text=messages.signup_request_error_duplicate.format(game_id=game_id),
-            user=user_id,
-        )
-        if not ENV == Environment.DEV:
-            return
-    except NoResultFound:
-        logger.info("Verified user has not already signed up")
-
-    signup_close = db_utils.get_game_start(game_id)
-    if signup_close < datetime.datetime.fromtimestamp(
-        float(event["event_ts"]), pytz.utc
-    ):
+    if datetime.datetime.utcnow().astimezone(pytz.utc) > game.start:
         logger.info("User signup requested after game start, request denied")
 
         client.chat_postEphemeral(
@@ -260,26 +215,41 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             text=messages.signup_request_error_game_started,
             user=user_id,
         )
-        if not ENV == Environment.DEV:
+
+        return
+
+    try:
+        db_utils.create_records([models.Participant(game_id=game.id, user_id=user_id)])
+
+    except IntegrityError as e:
+        if type(e.__cause__) is UniqueViolation:
+            logger.info("User already signed up for game")
+
+            client.chat_postEphemeral(
+                token=BOT_TOKEN,
+                channel=message_channel,
+                text=messages.signup_request_error_duplicate.format(game_id=game.id),
+                user=user_id,
+            )
+
             return
 
-    logger.info("Valid user signup request")
+        else:
+            raise
 
-    db_utils.add_user_to_game(user_id, game_id)
+    else:
+        logger.info("Valid user signup request")
+        logger.info("User signed up for game successfully")
 
-    logger.info("User signed up for game successfully")
-
-    game_start = db_utils.get_game_start(game_id)
-
-    client.chat_postEphemeral(
-        token=BOT_TOKEN,
-        channel=message_channel,
-        text=messages.signup_request_success.format(
-            game_id=game_id,
-            game_start=slack_utils.DateTimeShortPretty(game_start),
-        ),
-        user=user_id,
-    )
+        client.chat_postEphemeral(
+            token=BOT_TOKEN,
+            channel=message_channel,
+            text=messages.signup_request_success.format(
+                game_id=game.id,
+                game_start=slack_utils.DateTimeShortPretty(game.start),
+            ),
+            user=user_id,
+        )
 
 
 @app.event("reaction_removed")

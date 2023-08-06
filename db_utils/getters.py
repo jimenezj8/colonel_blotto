@@ -49,3 +49,14 @@ def get_user_active_games(user_id: str) -> list[Game]:
 
     with SessionMaker() as session:
         return session.execute(select).scalars().all()
+
+
+def get_announcement_game(channel: str, ts: datetime.datetime):
+    "Fetches a Game record by using the announcement message metadata."
+    select = sa.select(Game).where(
+        Game.announcement_channel == channel,
+        Game.announcement_ts == ts,
+    )
+
+    with SessionMaker() as session:
+        return session.execute(select).scalar_one()
