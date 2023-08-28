@@ -317,6 +317,7 @@ class RoundLibrary:
 class GameFactory:
     @staticmethod
     def new_game(
+        user_id: str,
         num_rounds: int,
         round_length: datetime.timedelta,
         start: datetime.datetime,
@@ -332,6 +333,7 @@ class GameFactory:
         time that the first round's rules will be posted
         """
         new_game = Game(
+            admin=user_id,
             start=start,
             end=(start + (round_length * num_rounds)),
             num_rounds=num_rounds,

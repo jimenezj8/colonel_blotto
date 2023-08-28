@@ -597,6 +597,7 @@ def handle_new_game_submission(
     ack()
     logger.info("Parsing game parameter inputs")
 
+    user_id = context["user_id"]
     inputs = view["state"]["values"]
 
     num_rounds = int(inputs["num_rounds"]["num_rounds"]["value"])
@@ -608,9 +609,7 @@ def handle_new_game_submission(
     round_length = datetime.timedelta(**{round_length_unit: round_length_num})
 
     signup_close = int(inputs["datetime"]["datetime"]["selected_date_time"])
-    timezone_input = client.users_info(token=BOT_TOKEN, user=context["user_id"])[
-        "user"
-    ]["tz"]
+    timezone_input = client.users_info(token=BOT_TOKEN, user=user_id)["user"]["tz"]
 
     signup_close = (
         pytz.timezone(timezone_input)
@@ -620,7 +619,7 @@ def handle_new_game_submission(
 
     logger.info("Valid params, creating game instance")
 
-    game = blotto.GameFactory.new_game(num_rounds, round_length, signup_close)
+    game = blotto.GameFactory.new_game(user_id, num_rounds, round_length, signup_close)
 
     logger.info("Game created, announcing")
 
@@ -632,7 +631,7 @@ def handle_new_game_submission(
         token=BOT_TOKEN,
         channel=selected_channel,
         text=messages.new_game_announcement.format(
-            user_id=context["user_id"],
+            user_id=user_id,
             num_rounds=num_rounds,
             round_length=round_length,
             game_id=game.id,
@@ -686,6 +685,7 @@ if __name__ == "__main__":
             records = [
                 models.Game(
                     id=0,
+                    admin=USER_ID,
                     start=game_start,
                     end=game_start + datetime.timedelta(days=1),
                     num_rounds=3,

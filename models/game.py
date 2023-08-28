@@ -8,6 +8,7 @@ class Game(Base):
     __tablename__ = "game"
 
     id = orm.mapped_column(sa.Integer, primary_key=True)
+    admin = orm.mapped_column(sa.Text, nullable=False)
     start = orm.mapped_column(sa.DateTime(timezone=True), nullable=False)
     end = orm.mapped_column(sa.DateTime(timezone=True), nullable=False)
     num_rounds = orm.mapped_column(sa.Integer, nullable=False)
@@ -20,6 +21,7 @@ class Game(Base):
         return (
             "Game("
             f"id={self.id!r}, "
+            f"admin={self.admin!r}, "
             f"start={self.start!r}, "
             f"end={self.end!r}, "
             f"num_rounds={self.num_rounds!r}, "
