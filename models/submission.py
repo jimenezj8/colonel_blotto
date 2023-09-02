@@ -1,3 +1,5 @@
+import datetime
+
 import sqlalchemy as sa
 from sqlalchemy import orm
 
@@ -7,12 +9,14 @@ from models.common import Base
 class Submission(Base):
     __tablename__ = "submission"
 
-    game_id = orm.mapped_column(sa.Integer, nullable=False)
-    user_id = orm.mapped_column(sa.Text, nullable=False)
-    round_number = orm.mapped_column(sa.Integer, nullable=False)
-    field = orm.mapped_column(sa.Integer, nullable=False)
-    soldiers = orm.mapped_column(sa.Integer, nullable=False)
-    timestamp = orm.mapped_column(sa.DateTime(timezone=True), nullable=False)
+    game_id: orm.Mapped[int] = orm.mapped_column(sa.Integer, nullable=False)
+    user_id: orm.Mapped[str] = orm.mapped_column(sa.Text, nullable=False)
+    round_number: orm.Mapped[int] = orm.mapped_column(sa.Integer, nullable=False)
+    field: orm.Mapped[int] = orm.mapped_column(sa.Integer, nullable=False)
+    soldiers: orm.Mapped[int] = orm.mapped_column(sa.Integer, nullable=False)
+    timestamp: orm.Mapped[datetime.datetime] = orm.mapped_column(
+        sa.DateTime(timezone=True), nullable=False
+    )
 
     __table_args__ = (
         sa.ForeignKeyConstraint(

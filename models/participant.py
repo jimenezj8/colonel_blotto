@@ -7,8 +7,10 @@ from models.common import Base, CascadeForeignKey
 class Participant(Base):
     __tablename__ = "participant"
 
-    game_id = orm.mapped_column(CascadeForeignKey("game.id"), nullable=False)
-    user_id = orm.mapped_column(sa.Text, nullable=False)
+    game_id: orm.Mapped[int] = orm.mapped_column(
+        CascadeForeignKey("game.id"), nullable=False
+    )
+    user_id: orm.Mapped[str] = orm.mapped_column(sa.Text, nullable=False)
 
     __table_args__ = (
         sa.PrimaryKeyConstraint("game_id", "user_id", name="participant_pk"),

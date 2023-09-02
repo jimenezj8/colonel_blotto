@@ -7,10 +7,10 @@ from models.common import Base
 class GameResult(Base):
     __tablename__ = "game_result"
 
-    game_id = orm.mapped_column(sa.Integer, nullable=False)
-    user_id = orm.mapped_column(sa.Text, nullable=False)
-    score = orm.mapped_column(sa.Float, nullable=False)
-    rank = orm.mapped_column(sa.Integer, nullable=False)
+    game_id: orm.Mapped[int] = orm.mapped_column(sa.Integer, nullable=False)
+    user_id: orm.Mapped[str] = orm.mapped_column(sa.Text, nullable=False)
+    score: orm.Mapped[float] = orm.mapped_column(sa.Float, nullable=False)
+    rank: orm.Mapped[int] = orm.mapped_column(sa.Integer, nullable=False)
 
     __table_args__ = (
         sa.PrimaryKeyConstraint("game_id", "user_id", name="gameresult_pk"),
