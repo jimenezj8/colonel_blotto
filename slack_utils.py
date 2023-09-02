@@ -38,3 +38,10 @@ class DateTimeShortPretty(SlackDatetime):
 
     def __init__(self, timestamp: datetime.datetime):
         super().__init__(timestamp, self.formatter)
+
+
+class DateTimeShort(SlackDatetime):
+    formatter = f"{DatetimeFormats.DATE_SHORT.value}, {DatetimeFormats.TIME.value}"
+
+    def __init__(self, timestamp: datetime.datetime):
+        super().__init__(timestamp, self.formatter)
