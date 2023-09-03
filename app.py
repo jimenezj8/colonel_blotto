@@ -183,7 +183,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     user_id = event["user"]
 
     try:
-        game = db_utils.get_announcement_game(
+        game = db_utils.get_game_from_announcement(
             message_channel,
             datetime.datetime.fromtimestamp(float(message_ts)),
         )

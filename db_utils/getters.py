@@ -52,7 +52,7 @@ def get_user_active_games(user_id: str) -> list[Game]:
         return session.execute(select).scalars().all()
 
 
-def get_announcement_game(channel: str, ts: datetime.datetime):
+def get_game_from_announcement(channel: str, ts: datetime.datetime):
     "Fetches a Game record by using the announcement message metadata."
     select = sa.select(Game).where(
         Game.announcement_channel == channel,
