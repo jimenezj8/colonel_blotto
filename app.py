@@ -270,10 +270,11 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
         if not ENV == Environment.DEV:
             return
 
-    # single out message content, check that bot sent message and that it was for a game signup
+    # single out message content
+    # check that bot sent message and that it was for a game signup
     message = message["messages"][0]
-    if (not message["bot_id"] == client.auth_test()["bot_id"]) or (
-        "has started a new game of Blotto" not in message["text"]
+    if (not message["bot_id"] == BOT_ID) or (
+        message["metadata"]["event_type"] != "game_announced"
     ):
         logger.info("Message did not meet criteria for valid signup withdrawal request")
         if not ENV == Environment.DEV:
@@ -295,7 +296,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     game_id = int(message["metadata"]["event_payload"]["game_id"])
 
     try:
-        db_utils.check_participation(user_id, game_id)
+        participant = db_utils.get_participant(game_id, user_id)
         logger.info("Verified user has signed up")
     except NoResultFound:
         logger.info("Signup record not located, cannot be removed")
@@ -310,7 +311,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
         if not ENV == Environment.DEV:
             return
 
-    db_utils.remove_user_from_game(user_id, game_id)
+    db_utils.delete_records([participant])
 
     logger.info("User removed from game successfully")
 

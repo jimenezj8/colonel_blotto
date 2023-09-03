@@ -12,3 +12,10 @@ def create_records(records: Iterable[any]):
 
 def update_records(records: Iterable[any]):
     create_records(records)
+
+
+def delete_records(records: Iterable[any]):
+    with SessionMaker() as session:
+        for record in records:
+            session.delete(record)
+        session.commit()

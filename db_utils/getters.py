@@ -77,3 +77,13 @@ def get_game(game_id: int) -> Game:
 
     with SessionMaker() as session:
         return session.execute(select).scalar_one()
+
+
+def get_participant(game_id: int, user_id: str) -> Participant:
+    "Fetches a single Participant by IDs"
+    select = sa.select(Participant).where(
+        Participant.game_id == game_id, Participant.user_id == user_id
+    )
+
+    with SessionMaker() as session:
+        return session.execute(select).scalar_one()
