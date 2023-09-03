@@ -43,58 +43,41 @@ BOT_MEMBER_ID = str(app.client.bots_info(bot=BOT_ID).data["bot"]["user_id"])
 logging.basicConfig(level=logging.DEBUG)
 
 
-# @app.command("/cancel_game")
-# def cancel_game_command_handler(
-#     ack: Ack, client: WebClient, command: dict, logger: logging.Logger
-# ):
-#     ack()
+@app.command("/blotto_cancel")
+def serve_cancel_game_modal(
+    ack: Ack, client: WebClient, command: dict, logger: logging.Logger
+):
+    ack()
 
-#     user_id = command["user_id"]
-#     response_channel = command["channel_id"]
-#     game_id = int(command["text"])
+    user_id = command["user_id"]
+    trigger_id = command["trigger_id"]
 
-#     try:
-#         game = db_utils.get_game(game_id)
-#     except NoResultFound:
-#         logger.info("Game requested to cancel does not exist")
+    logger.info(f"User {user_id} requesting to cancel a game")
 
-#         client.chat_postEphemeral(
-#             token=BOT_TOKEN,
-#             user=user_id,
-#             channel=response_channel,
-#             text="The game you've requested to cancel doesn't exist, please double-check the ID you provided.",
-#         )
-#         if not ENV == Environment.DEV:
-#             return
+    games_as_admin = db_utils.get_admin_games(user_id)
+    games_as_admin = [
+        game
+        for game in games_as_admin
+        if game.start >= datetime.datetime.utcnow().astimezone(datetime.UTC)
+        and not game.canceled
+    ]
 
-#     if pytz.utc.localize(datetime.datetime.utcnow()) >= game.start:
-#         logger.info("Game has already begun, letting user know")
+    if not games_as_admin:
+        logger.info("User is not admin of any pending games")
 
-#         client.chat_postEphemeral(
-#             token=BOT_TOKEN,
-#             user=user_id,
-#             channel=response_channel,
-#             text="The game you've requested to cancel has already begun, sorry.",
-#         )
-#         if not ENV == Environment.DEV:
-#             return
+        client.chat_postEphemeral(
+            user=user_id,
+            channel=command["channel_id"],
+            text="There aren't any games you can cancel at the moment",
+        )
 
-#     elif game.canceled:
-#         logger.info("Game has already been canceled, letting user know")
+        return
 
-#         client.chat_postEphemeral(
-#             token=BOT_TOKEN,
-#             user=user_id,
-#             channel=response_channel,
-#             text="The game you've requested to cancel was already canceled.",
-#         )
-#         if not ENV == Environment.DEV:
-#             return
+    logger.info("Serving cancel game modal")
 
-#     logger.info(f"Canceling game {game_id} by request from {user_id}")
-#     db_utils.cancel_game(game_id)
-
-#     logger.info("Game canceled successfully")
+    client.views_open(
+        trigger_id=trigger_id, view=views.cancel_game.load(games_as_admin)
+    )
 
 
 @app.command("/blotto_game")
@@ -518,7 +501,44 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
 def ignore_messages(ack: Ack, logger: logging.Logger):
     ack()
 
-    logger.info("Message posted somewhere, nobody cares")
+    logger.info("A message was changed or posted somewhere")
+
+
+@app.view("cancel_game_select_game_view")
+def cancel_game_handler(
+    ack: Ack,
+    client: WebClient,
+    view: View,
+    logger: logging.Logger,
+):
+    logger.info("Received cancel_game view submission")
+
+    view_state = view["state"]["values"]
+    element = view_state["cancel_game_select_game_block"]["select_game"]
+    game_id = element["selected_option"]["value"]
+
+    ack()
+
+    game = db_utils.get_game(game_id)
+
+    game.canceled = True
+
+    db_utils.update_records([game])
+
+    logger.info("Game attribute 'canceled' updated to 'True'")
+
+    client.chat_postMessage(
+        channel=game.announcement_channel,
+        text="Sorry, this game has been canceled :slightly_frowning_face:",
+        thread_ts=str(game.announcement_ts.timestamp()),
+        mrkdwn=True,
+        reply_broadcast=True,
+    )
+    client.reactions_add(
+        channel=game.announcement_channel,
+        name="x",
+        timestamp=str(game.announcement_ts.timestamp()),
+    )
 
 
 @app.view("strategy_submission_select_game_view")

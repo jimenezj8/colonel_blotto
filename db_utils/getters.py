@@ -1,4 +1,5 @@
 import datetime
+from typing import Sequence
 
 import sqlalchemy as sa
 
@@ -57,6 +58,22 @@ def get_announcement_game(channel: str, ts: datetime.datetime):
         Game.announcement_channel == channel,
         Game.announcement_ts == ts,
     )
+
+    with SessionMaker() as session:
+        return session.execute(select).scalar_one()
+
+
+def get_admin_games(user_id: str) -> Sequence[Game]:
+    "Fetches Game records where the indicated user is serving as an admin."
+    select = sa.select(Game).where(Game.admin == user_id)
+
+    with SessionMaker() as session:
+        return session.execute(select).scalars().all()
+
+
+def get_game(game_id: int) -> Game:
+    "Fetches a single Game by ID"
+    select = sa.select(Game).where(Game.id == game_id)
 
     with SessionMaker() as session:
         return session.execute(select).scalar_one()
