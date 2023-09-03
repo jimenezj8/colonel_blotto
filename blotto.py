@@ -217,7 +217,7 @@ class TestRound(BlottoRound):
 class DecreasingSoldiers(BlottoRound):
     """
     This round can also be interpreted as Increasing soldiers, if fields are viewed in backwards order.
-    """
+    """  # noqa: E501
 
     ID = 1
     DIFFICULTY = 1
@@ -230,7 +230,7 @@ class DecreasingSoldiers(BlottoRound):
 > • In each field, score will be equal to:
 >     • The difference in soldiers for the person with more soldiers
 >     • 0 for the person with less soldiers
-"""
+"""  # noqa: E501
 
     def __init__(
         self,
@@ -240,7 +240,7 @@ class DecreasingSoldiers(BlottoRound):
     ):
         """
         This class can be used to "load" an existing configuration or generate a new one.
-        """
+        """  # noqa: E501
         field_bounds = (3, 7)
         soldier_bounds = (30, 100)
 
@@ -255,7 +255,7 @@ class DecreasingSoldiers(BlottoRound):
         No field may have a non-integer submission. No field may have a negative submission.
 
         This method should only be used by loaded configurations. It returns a dictionary of field-specific errors for usage in responding to users.
-        """
+        """  # noqa: E501
         if sum(submission) > self.soldiers:
             raise ValueError(f"Submitted soldiers must total less than {self.soldiers}")
 
@@ -361,19 +361,3 @@ class GameFactory:
         db_utils.create_records(new_rounds)
 
         return new_game
-
-
-def update_game_results(game_id: int) -> None:
-    round_results = db_utils.get_round_results_dataframe(game_id)
-
-    game_results = round_results.groupby(by="user_id", as_index=False).agg(
-        {"score": "mean"}
-    )
-    game_results["game_id"] = game_id
-    game_results.sort_values(by="score", ascending=False, inplace=True)
-    game_results = (
-        game_results.reset_index(drop=True)
-        .reset_index(drop=False)
-        .rename(columns={"index": "rank"})
-    )
-    game_results.to_sql("game_result", Engine, if_exists="append")

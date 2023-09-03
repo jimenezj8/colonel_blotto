@@ -2,7 +2,6 @@ import datetime
 import json
 import logging
 import os
-import sys
 import time
 
 import pytz
@@ -744,18 +743,9 @@ if __name__ == "__main__":
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
     try:
-        if ENV == Environment.PROD:
-            blotto.RoundLibrary.ROUND_MAP.pop(0)
-            app.client.chat_postMessage(
-                token=BOT_TOKEN, channel="C03LDE0MTQX", text="Back online"
-            )
         handler.start()
     except KeyboardInterrupt:
         app.logger.info("Shutting down")
-        if ENV == Environment.PROD:
-            app.client.chat_postMessage(
-                token=BOT_TOKEN, channel="C03LDE0MTQX", text="Shutting down temporarily"
-            )
         # cleanup actions include:
         # 1. deleting all scheduled messages to #testing
         # 2. deleting all bot messages in #testing
@@ -775,4 +765,3 @@ if __name__ == "__main__":
                     app.client.chat_delete(channel=TEST_CHANNEL_ID, ts=message["ts"])
                 except SlackApiError:
                     pass
-        sys.exit(0)
