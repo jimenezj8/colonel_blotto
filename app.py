@@ -561,7 +561,7 @@ def process_strategy_submission(
     client: WebClient,
     logger: logging.Logger,
     view: dict,
-    context,
+    context: dict,
 ):
     logger.info("User submitted strategy")
 
@@ -575,7 +575,7 @@ def process_strategy_submission(
     errors = blotto_round.check_field_rules(view.state.values)
 
     if errors:
-        logger.error("Validation errors in submission, update user view")
+        logger.info("Validation errors in submission, update user view")
         logger.info(errors)
         ack(response_action="errors", errors=errors)
         return

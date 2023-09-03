@@ -60,10 +60,9 @@ Game {game_id} has ended! Congratulations to <@{winner}>, you've placed first wi
 Thanks for playing everyone; if you'd like to view your scores, you can check it out on the app homepage, with detailed results about how you did on each round and in the game overall.
 """
 
-general_rules = """
-> • Soldiers must be integers
-> • You can make multiple submissions, but only the last one will count
-> • No collusion!
+general_rules = """• Soldiers must be integers
+• You can make multiple submissions, but only the last one will count
+• No collusion!
 """
 
 submit_strategy_error_not_in_active_game = """
