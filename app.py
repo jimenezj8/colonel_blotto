@@ -9,6 +9,7 @@ import pytz
 from psycopg2.errors import UniqueViolation
 from slack_bolt import Ack, App, BoltContext
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from slack_sdk.errors import SlackApiError
 from slack_sdk.models.views import View
 from slack_sdk.web.client import WebClient
 from sqlalchemy.exc import IntegrityError, NoResultFound
@@ -22,7 +23,7 @@ import views
 from enums import Environment
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-BOT_MEMBER_ID = "U03LWG7NAAY"
+TEST_CHANNEL_ID = os.getenv("DEVELOPMENT_CHANNEL_ID")
 USER_ID = os.getenv("DEVELOPER_MEMBER_ID")
 
 
@@ -36,6 +37,8 @@ app = App(
     signing_secret=os.getenv("SIGNING_SECRET"),
     ignoring_self_events_enabled=False,
 )
+BOT_ID = str(app.client.auth_test().data["bot_id"])
+BOT_MEMBER_ID = str(app.client.bots_info(bot=BOT_ID).data["bot"]["user_id"])
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -509,6 +512,8 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             game_end_handler(client, payload, logger)
 
 
+@app.event({"type": "message", "subtype": "message_changed"})
+@app.event({"type": "message", "subtype": "message_deleted"})
 @app.message("")
 def ignore_messages(ack: Ack, logger: logging.Logger):
     ack()
@@ -684,7 +689,6 @@ if __name__ == "__main__":
             game_start = datetime.datetime.utcnow()
             records = [
                 models.Game(
-                    id=0,
                     admin=USER_ID,
                     start=game_start,
                     end=game_start + datetime.timedelta(days=1),
@@ -692,8 +696,16 @@ if __name__ == "__main__":
                     round_length=datetime.timedelta(hours=8),
                     canceled=False,
                 ),
+                models.Game(
+                    admin=USER_ID,
+                    start=game_start + datetime.timedelta(hours=1),
+                    end=game_start + datetime.timedelta(hours=4),
+                    num_rounds=3,
+                    round_length=datetime.timedelta(hours=1),
+                    canceled=False,
+                ),
                 models.GameRound(
-                    game_id=0,
+                    game_id=1,
                     number=1,
                     library_id=0,
                     start=game_start,
@@ -702,7 +714,7 @@ if __name__ == "__main__":
                     soldiers=100,
                 ),
                 models.Participant(
-                    game_id=0,
+                    game_id=1,
                     user_id=USER_ID,
                 ),
             ]
@@ -714,13 +726,32 @@ if __name__ == "__main__":
         if ENV == Environment.PROD:
             blotto.RoundLibrary.ROUND_MAP.pop(0)
             app.client.chat_postMessage(
-                token=BOT_TOKEN, channel="testing", text="Back online"
+                token=BOT_TOKEN, channel="C03LDE0MTQX", text="Back online"
             )
         handler.start()
     except KeyboardInterrupt:
         app.logger.info("Shutting down")
         if ENV == Environment.PROD:
             app.client.chat_postMessage(
-                token=BOT_TOKEN, channel="testing", text="Shutting down temporarily"
+                token=BOT_TOKEN, channel="C03LDE0MTQX", text="Shutting down temporarily"
             )
+        # cleanup actions include:
+        # 1. deleting all scheduled messages to #testing
+        # 2. deleting all bot messages in #testing
+        if ENV == Environment.DEV:
+            response = app.client.chat_scheduledMessages_list(channel=TEST_CHANNEL_ID)
+            scheduled_messages = response.data["scheduled_messages"]
+            for message in scheduled_messages:
+                app.client.chat_deleteScheduledMessage(
+                    channel=TEST_CHANNEL_ID,
+                    scheduled_message_id=message["message_id"],
+                )
+
+            response = app.client.conversations_history(channel=TEST_CHANNEL_ID)
+            chat_messages = response.data["messages"]
+            for message in chat_messages:
+                try:
+                    app.client.chat_delete(channel=TEST_CHANNEL_ID, ts=message["ts"])
+                except SlackApiError:
+                    pass
         sys.exit(0)
