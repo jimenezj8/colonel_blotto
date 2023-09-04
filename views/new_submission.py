@@ -74,12 +74,12 @@ def update(
                 blocks.InputBlock(
                     label=f"Field {field_num + 1}",
                     element=blocks.PlainTextInputElement(
-                        action_id=f"field-{field_num + 1}",
+                        action_id=f"field-{field_num + 1}-input",
                         placeholder=blocks.PlainTextObject(
                             text="Enter a number of soldiers"
                         ),
                     ),
-                    block_id=f"field-{field_num + 1}",
+                    block_id=f"field-{field_num + 1}-block",
                 )
                 for field_num in range(round_fields)
             ]
