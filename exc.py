@@ -16,3 +16,8 @@ class BlottoRoundNotImplementedError(Exception):
         self.message = (
             f"Subclass of BlottoRound is missing the following attributes: {missing}"
         )
+
+
+class BlottoValidationError(Exception):
+    def __init__(self, message):
+        self.message = message
