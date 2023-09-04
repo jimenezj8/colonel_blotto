@@ -4,7 +4,11 @@ import random
 from typing import Optional, Self
 
 import db_utils
-from exc import *  # noqa: F403
+from exc import (
+    BlottoRoundNotImplementedError,
+    BlottoRoundToGameRoundTranslationError,
+    BlottoValidationError,
+)
 from models import Game, GameRound
 
 logging.basicConfig(level=logging.INFO)
@@ -79,7 +83,7 @@ class BlottoRound:
                 missing.append(attr)
 
         if missing:
-            raise BlottoRoundNotImplementedError(missing)  # noqa: F405
+            raise BlottoRoundNotImplementedError(missing)
 
     @classmethod
     def from_new(cls: type[Self]) -> Self:
@@ -118,7 +122,7 @@ class BlottoRound:
                 missing.append(key)
 
         if missing:
-            raise BlottoRoundToGameRoundTranslationError(missing)  # noqa: F405
+            raise BlottoRoundToGameRoundTranslationError(missing)
 
         return GameRound(**vals)
 
@@ -212,13 +216,19 @@ class TestRound(BlottoRound):
 
     def check_general_rules(self, submission: list[int]):
         if sum(submission) > self.soldiers:
-            raise BlottoValidationError("Total soldiers too high")  # noqa: F405
+            raise BlottoValidationError("Total soldiers too high")
 
         if sum(submission) < self.soldiers:
-            raise BlottoValidationError("Total soldiers too low")  # noqa: F405
+            raise BlottoValidationError("Total soldiers too low")
 
         if len(submission) != self.fields:
-            raise BlottoValidationError("Number of fields is incorrect")  # noqa: F405
+            raise BlottoValidationError("Number of fields is incorrect")
+
+        if any([soldiers < 0 for soldiers in submission]):
+            raise BlottoValidationError("Negative soldiers disallowed")
+
+        if any([not isinstance(soldiers, int) for soldiers in submission]):
+            raise BlottoValidationError("Integer number of soldiers only")
 
     @classmethod
     def _random_fields(cls) -> int:
