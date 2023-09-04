@@ -20,6 +20,7 @@ import models
 import slack_utils
 import views
 from enums import Environment
+from exc import BlottoValidationError
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 TEST_CHANNEL_ID = os.getenv("DEVELOPMENT_CHANNEL_ID")
@@ -592,12 +593,40 @@ def process_strategy_submission(
         game_id=metadata["game_id"], round_number=metadata["round_num"]
     )
 
-    errors = blotto_round.check_field_rules(view.state.values)
+    submission = {
+        element_id.split("-")[1]: int(element_state.value)
+        for block in view.state.values.values()
+        for element_id, element_state in block.items()
+    }
+    submission = [
+        item[1]
+        for item in sorted(
+            submission.items(),
+            key=lambda item: item[0],
+        )
+    ]
 
-    if errors:
+    try:
+        blotto_round.check_general_rules(submission)
+    except BlottoValidationError as e:
+        logger.info("Validation error in submission, update user view")
+        logger.info(e)
+        ack(
+            response_action="errors",
+            errors={f"field-{i+1}-block": str(e) for i in range(len(submission))},
+        )
+        return
+
+    field_errors = blotto_round.check_field_rules(submission)
+    if field_errors:
         logger.info("Validation errors in submission, update user view")
-        logger.info(errors)
-        ack(response_action="errors", errors=errors)
+        logger.info(field_errors)
+        ack(
+            response_action="errors",
+            errors={
+                f"field-{field}-block": error for field, error in field_errors.items()
+            },
+        )
         return
 
     ack(response_action="clear")
