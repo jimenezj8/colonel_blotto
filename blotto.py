@@ -127,7 +127,7 @@ class BlottoRound:
         return GameRound(**vals)
 
     def check_general_rules(self, submission: list[int]):
-        """Validates a user submission according to general rules.
+        """Validates a user submission according to general round rules.
 
         For example, participants may never allocate more soldiers
         than they have available.
@@ -136,7 +136,19 @@ class BlottoRound:
             BlottoValidationError on any rule violation. This can vary by
             BlottoRound.
         """
-        raise NotImplementedError
+        if sum(submission) > self.soldiers:
+            raise BlottoValidationError("Total soldiers is too high")
+
+        if len(submission) > self.fields:
+            raise BlottoValidationError("Total fields is too high")
+
+        if any([soldiers < 0 for soldiers in submission]):
+            raise BlottoValidationError("Soldiers in a field cannot be negative")
+
+        if any([not isinstance(soldiers, int) for soldiers in submission]):
+            raise BlottoValidationError(
+                "All fields must have an integer number of soldiers"
+            )
 
     def check_field_rules(self, submission: list[int]) -> dict[str, str]:
         """Validates a user submission according to round rules.
@@ -256,43 +268,20 @@ class DecreasingSoldiers(BlottoRound):
 >     • 0 for the person with less soldiers
 """  # noqa: E501
 
-    def __init__(
-        self,
-        fields: int | None = None,
-        soldiers: int | None = None,
-        game_id: int | None = None,
-    ):
-        """
-        This class can be used to "load" an existing configuration or generate a new one.
-        """  # noqa: E501
-        field_bounds = (3, 7)
-        soldier_bounds = (30, 100)
+    @classmethod
+    def _random_fields(cls) -> int:
+        return random.randint(3, 7)
 
-        super().__init__(fields, soldiers, field_bounds, soldier_bounds, game_id)
+    @classmethod
+    def _random_soldiers(cls) -> int:
+        return random.randint(10, 20) * 5
 
     def check_field_rules(self, submission: list[int]) -> dict[str, str]:
-        """
-        This round enforces that fields submitted must have non-increasing numbers of soldiers in fields.
-
-        If, in Field 1, there are 10 soldiers, then Field 2 must contain no more than 9, and Field 3 no more than 8, and so on.
-
-        No field may have a non-integer submission. No field may have a negative submission.
-
-        This method should only be used by loaded configurations. It returns a dictionary of field-specific errors for usage in responding to users.
-        """  # noqa: E501
-        if sum(submission) > self.soldiers:
-            raise ValueError(f"Submitted soldiers must total less than {self.soldiers}")
-
         errors = {}
-        for field, soldiers in enumerate(submission):
-            if soldiers < 0:
-                errors[f"field-{field+1}"] = "Must be positive value"
-
-            if field > 0:
-                if soldiers > submission[field - 1]:
-                    errors[
-                        f"field-{field+1}"
-                    ] = f"Must be fewer soldiers than Field {field}"
+        for i, soldiers in enumerate(submission):
+            if i > 0:
+                if soldiers > submission[i - 1]:
+                    errors[i + 1] = f"Must be fewer soldiers than Field {i}"
 
         return errors
 
