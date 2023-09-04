@@ -322,6 +322,36 @@ Scoring will be as follows:
         return errors
 
 
+class EvenSoldiers(BlottoRound):
+    LIBRARY_ID = 3
+    RULES = """
+All submissions must exhibit an even number of soldiers in each field.
+
+Additionally, deploying soldiers to a field will cost 1 point per field,
+but deploying more than 1 soldier to a field will only ever cost 1 point.
+
+Scoring will be as follows:
+• In each field, score will be equal to:
+    • 3 for the participant with a higher number of soldiers
+"""
+
+    @classmethod
+    def _random_fields(cls) -> int:
+        return random.randint(3, 7)
+
+    @classmethod
+    def _random_soldiers(cls) -> int:
+        return random.randint(10, 20) * 5
+
+    def check_field_rules(self, submission: list[int]) -> dict[str, str]:
+        errors = {}
+        for i, soldiers in enumerate(submission):
+            if soldiers % 2 != 0:
+                errors[i + 1] = "Must be an even number of soldiers"
+
+        return errors
+
+
 class RoundLibrary:
     ROUND_MAP = {
         round.LIBRARY_ID: round
