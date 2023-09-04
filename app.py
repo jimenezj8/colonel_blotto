@@ -776,16 +776,17 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         app.logger.info("Shutting down")
         # cleanup actions include:
-        # 1. deleting all scheduled messages to #testing
+        # 1. deleting all scheduled messages from the bot user
         # 2. deleting all bot messages in #testing
         if ENV == Environment.DEV:
-            response = app.client.chat_scheduledMessages_list(channel=TEST_CHANNEL_ID)
+            response = app.client.chat_scheduledMessages_list()
             scheduled_messages = response.data["scheduled_messages"]
             for message in scheduled_messages:
-                app.client.chat_deleteScheduledMessage(
-                    channel=TEST_CHANNEL_ID,
-                    scheduled_message_id=message["message_id"],
-                )
+                if message.get("bot_id") == BOT_ID:
+                    app.client.chat_deleteScheduledMessage(
+                        channel=TEST_CHANNEL_ID,
+                        scheduled_message_id=message["message_id"],
+                    )
 
             response = app.client.conversations_history(channel=TEST_CHANNEL_ID)
             chat_messages = response.data["messages"]
