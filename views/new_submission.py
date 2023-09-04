@@ -6,14 +6,13 @@ from slack_sdk.models.views import View
 
 import messages
 from models import Game
-from slack_utils import DateTimeShortPretty
 
 
 def load(games: Iterable[Game]):
     game_options = [
         blocks.Option(
             value=f"{game.id}",
-            label=f"Game {game.id} - Began {DateTimeShortPretty(game.start).value}",
+            label=f"Game {game.id}",
         )
         for game in games
     ]
