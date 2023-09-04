@@ -286,6 +286,42 @@ Scoring will be as follows:
         return errors
 
 
+class DecreasingSoldiersSplit(BlottoRound):
+    LIBRARY_ID = 2
+    RULES = """
+All submissions must exhibit a decreasing number of soldiers in each next field, except
+for one break point at just after the half number of fields.
+
+For example, in a round with 7 fields, and a break point of Field 4:
+• Field 2 must have less than Field 1
+• Field 3 must have less than Field 2
+• Field 4 must have less than Field 3
+• Field 5, however, may have more soldiers than Field 4
+
+Scoring will be as follows:
+• In each field, score will be equal to:
+    • The difference in soldiers for the person with more soldiers
+    • 0 for the person with less soldiers
+"""
+
+    @classmethod
+    def _random_fields(cls) -> int:
+        return random.randint(3, 7)
+
+    @classmethod
+    def _random_soldiers(cls) -> int:
+        return random.randint(10, 20) * 5
+
+    def check_field_rules(self, submission: list[int]) -> dict[str, str]:
+        errors = {}
+        for i, soldiers in enumerate(submission):
+            if i > 0 and i != self.fields // 2 + 1:
+                if soldiers > submission[i - 1]:
+                    errors[i + 1] = f"Must be fewer soldiers than Field {i}"
+
+        return errors
+
+
 class RoundLibrary:
     ROUND_MAP = {
         round.LIBRARY_ID: round
