@@ -258,14 +258,14 @@ class DecreasingSoldiers(BlottoRound):
 
     LIBRARY_ID = 1
     RULES = """
-> All submissions must exhibit a decreasing number of soldiers in each next field.
->
-> For example, if you allocate 10 soldiers in Field 1, Field 2 may have no more than 10 soldiers.
->
-> Scoring will be as follows:
-> • In each field, score will be equal to:
->     • The difference in soldiers for the person with more soldiers
->     • 0 for the person with less soldiers
+All submissions must exhibit a decreasing number of soldiers in each next field.
+
+For example, if you allocate 10 soldiers in Field 1, Field 2 may have no more than 10 soldiers.
+
+Scoring will be as follows:
+• In each field, score will be equal to:
+    • The difference in soldiers for the person with more soldiers
+    • 0 for the person with less soldiers
 """  # noqa: E501
 
     @classmethod
