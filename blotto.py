@@ -122,8 +122,7 @@ class BlottoRound:
 
         return GameRound(**vals)
 
-    @classmethod
-    def check_general_rules(cls, submission: list[int]):
+    def check_general_rules(self, submission: list[int]):
         """Validates a user submission according to general rules.
 
         For example, participants may never allocate more soldiers
@@ -135,8 +134,7 @@ class BlottoRound:
         """
         raise NotImplementedError
 
-    @classmethod
-    def check_field_rules(cls, submission: list[int]) -> dict[str, str]:
+    def check_field_rules(self, submission: list[int]) -> dict[str, str]:
         """Validates a user submission according to round rules.
 
         Args:
@@ -201,8 +199,7 @@ class TestRound(BlottoRound):
 • Otherwise, the submission will succeed
 """
 
-    @classmethod
-    def check_field_rules(cls, submission: list[int]) -> dict[str, str]:
+    def check_field_rules(self, submission: list[int]) -> dict[str, str]:
         errors = {}
 
         for i, soldiers in enumerate(submission):
