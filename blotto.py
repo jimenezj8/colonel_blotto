@@ -237,8 +237,7 @@ class DecreasingSoldiers(BlottoRound):
     This round can also be interpreted as Increasing soldiers, if fields are viewed in backwards order.
     """  # noqa: E501
 
-    ID = 1
-    DIFFICULTY = 1
+    LIBRARY_ID = 1
     RULES = """
 > All submissions must exhibit a decreasing number of soldiers in each next field.
 >
@@ -292,7 +291,11 @@ class DecreasingSoldiers(BlottoRound):
 
 
 class RoundLibrary:
-    ROUND_MAP = {round.LIBRARY_ID: round for round in BlottoRound.__subclasses__()}
+    ROUND_MAP = {
+        round.LIBRARY_ID: round
+        for round in BlottoRound.__subclasses__()
+        if round.LIBRARY_ID != 0  # reserved for a testing round
+    }
 
     @classmethod
     def load_round(
