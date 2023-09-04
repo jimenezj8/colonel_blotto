@@ -3,8 +3,6 @@ import logging
 import random
 from typing import Optional, Self
 
-from slack_sdk.models.views import ViewStateValue
-
 import db_utils
 from exc import *  # noqa: F403
 from models import Game, GameRound
@@ -125,18 +123,29 @@ class BlottoRound:
         return GameRound(**vals)
 
     @classmethod
-    def check_field_rules(
-        cls, input_blocks: dict[str, dict[str, ViewStateValue]]
-    ) -> dict[str, str]:
+    def check_general_rules(cls, submission: list[int]):
+        """Validates a user submission according to general rules.
+
+        For example, participants may never allocate more soldiers
+        than they have available.
+
+        Raises:
+            BlottoValidationError on any rule violation. This can vary by
+            BlottoRound.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def check_field_rules(cls, submission: list[int]) -> dict[str, str]:
         """Validates a user submission according to round rules.
 
         Args:
-            input_blocks: a dictionary of block labels to elements, which are themselves
-                dictionaries of element labels to state values.
+            submission: a list representing fields, with each element
+            representing the number of soldiers allocated.
 
         Returns:
-            A dictionary of `{field_label: validation_error}` that describes
-            the issues with a user's submission.
+            A dictionary of `{field_number (int): validation_error (str)}` that
+            describes the issues with a user's submission.
         """
         raise NotImplementedError
 
@@ -187,23 +196,32 @@ class TestRound(BlottoRound):
     LIBRARY_ID = 0
     RULES = """This is an example of round rules.
 • This is a bullet point
+• A validation error should appear on all fields if total soldiers is not 100
 • A validation error should appear on Field 1 if the input value is not 8
 • Otherwise, the submission will succeed
 """
 
     @classmethod
-    def check_field_rules(
-        self, input_blocks: dict[str, dict[str, ViewStateValue]]
-    ) -> dict[str, str]:
+    def check_field_rules(cls, submission: list[int]) -> dict[str, str]:
         errors = {}
 
-        for i, (block_id, block) in enumerate(input_blocks.items()):
-            state_value = block[block_id.replace("block", "element")]
+        for i, soldiers in enumerate(submission):
+            field = i + 1
 
-            if i == 0 and int(state_value.value) != 8:
-                errors[block_id] = "Field 1 must have 8 soldiers"
+            if i == 0 and soldiers != 8:
+                errors[field] = "Field 1 must have 8 soldiers"
 
         return errors
+
+    def check_general_rules(self, submission: list[int]):
+        if sum(submission) > self.soldiers:
+            raise BlottoValidationError("Total soldiers too high")  # noqa: F405
+
+        if sum(submission) < self.soldiers:
+            raise BlottoValidationError("Total soldiers too low")  # noqa: F405
+
+        if len(submission) != self.fields:
+            raise BlottoValidationError("Number of fields is incorrect")  # noqa: F405
 
     @classmethod
     def _random_fields(cls) -> int:
