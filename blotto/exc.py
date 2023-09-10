@@ -11,11 +11,14 @@ class BlottoRoundToGameRoundTranslationError(Exception):
         return self.message
 
 
-class BlottoRoundNotImplementedError(Exception):
-    def __init__(self, missing: Iterable):
-        self.message = (
-            f"Subclass of BlottoRound is missing the following attributes: {missing}"
-        )
+class BlottoNotDefinedError(Exception):
+    def __init__(self, obj: object, missing: Iterable):
+        self.message = f"{type(obj)} is missing the following attributes: {missing}"
+
+
+class BlottoNotImplementedError(Exception):
+    def __init__(self, obj: type, undefined: str):
+        self.message = f"{obj} has not implemented {undefined}"
 
 
 class BlottoValidationError(Exception):
