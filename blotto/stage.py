@@ -20,7 +20,7 @@ class Stage:
     Stage defines a construct that manages constraints placed on players during a
     BlottoRound.
 
-    This metaclass defines what each new Stage variant must be able to do and what
+    This base class defines what each new Stage variant must be able to do and what
     characteristics must be provided. A Stage cannot exist without at least a number
     of fields and soldiers.
 
@@ -152,6 +152,8 @@ class TestRound(Stage):
 • A validation error should appear on all fields if total soldiers is not 100
 • A validation error should appear on Field 1 if the input value is not 8
 • Otherwise, the submission will succeed
+
+RULES must be Markdown-friendly.
 """
 
     def check_field_rules(self, submission: list[int]) -> dict[str, str]:

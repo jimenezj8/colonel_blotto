@@ -1,3 +1,6 @@
+from blotto.library import BlottoLibrary
+
+
 class Deployer:
     "Deployer manages the costs of sending soldiers to fields."
 
@@ -9,3 +12,18 @@ class Deployer:
 
 class PerFieldCost(Deployer):
     DESCRIPTION = "Deploying any amount of soldiers to a field costs points."
+
+
+class PerSoldierCost(Deployer):
+    DESCRIPTION = "Deploying a soldier has an associated cost in points."
+
+
+class ExponentialSoldierCost(PerSoldierCost):
+    DESCRIPTION = "Deploying soldiers has an exponentially increasing cost."
+
+
+class LinearSoldierCost(PerSoldierCost):
+    DESCRIPTION = "Deploying soldiers has a linearly increasing cost."
+
+
+DeployingLibrary = BlottoLibrary(Deployer.__subclasses__())

@@ -19,8 +19,8 @@ import messages
 import models
 import slack_utils
 import views
+from blotto.exc import BlottoValidationError
 from enums import Environment
-from exc import BlottoValidationError
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 TEST_CHANNEL_ID = os.getenv("DEVELOPMENT_CHANNEL_ID")
