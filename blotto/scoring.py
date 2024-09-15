@@ -211,4 +211,4 @@ class FlatValueTiesAllowed(Scorer):
         return points
 
 
-ScoringLibrary = BlottoLibrary(Scorer.__subclasses__())
+ScoringLibrary = BlottoLibrary(Scorer)
