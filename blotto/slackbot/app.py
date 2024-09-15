@@ -14,7 +14,7 @@ from slack_sdk.web.client import WebClient
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 import blotto
-import db_utils
+import blotto.db as db
 import messages
 import models
 import slack_utils
@@ -54,7 +54,7 @@ def serve_cancel_game_modal(
 
     logger.info(f"User {user_id} requesting to cancel a game")
 
-    games_as_admin = db_utils.get_admin_games(user_id)
+    games_as_admin = db.get_admin_games(user_id)
     games_as_admin = [
         game
         for game in games_as_admin
@@ -132,7 +132,7 @@ def serve_submission_modal(
     channel_id = command["channel_id"]
 
     logger.info(f"Querying games for user {user_id}")
-    games = db_utils.get_user_active_games(user_id)
+    games = db.get_user_active_games(user_id)
 
     if not games:
         logger.info(
@@ -157,7 +157,7 @@ def serve_submission_modal(
 def update_home_tab(client: WebClient, event: dict, logger: logging.Logger):
     user_id = event["user"]
 
-    db_utils.get_user_signups(user_id)
+    db.get_user_signups(user_id)
 
     # views.publish is the method that your app uses to push a view to the Home tab
     client.views_publish(
@@ -183,7 +183,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
     user_id = event["user"]
 
     try:
-        game = db_utils.get_game_from_announcement(
+        game = db.get_game_from_announcement(
             message_channel,
             datetime.datetime.fromtimestamp(float(message_ts)),
         )
@@ -205,7 +205,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
         return
 
     try:
-        db_utils.create_records([models.Participant(game_id=game.id, user_id=user_id)])
+        db.create_records([models.Participant(game_id=game.id, user_id=user_id)])
 
     except IntegrityError as e:
         if type(e.__cause__) is UniqueViolation:
@@ -296,7 +296,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
     game_id = int(message["metadata"]["event_payload"]["game_id"])
 
     try:
-        participant = db_utils.get_participant(game_id, user_id)
+        participant = db.get_participant(game_id, user_id)
         logger.info("Verified user has signed up")
     except NoResultFound:
         logger.info("Signup record not located, cannot be removed")
@@ -311,7 +311,7 @@ def remove_participant(event: dict, client: WebClient, logger: logging.Logger):
         if not ENV == Environment.DEV:
             return
 
-    db_utils.delete_records([participant])
+    db.delete_records([participant])
 
     logger.info("User removed from game successfully")
 
@@ -330,12 +330,12 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         metadata_payload = metadata["event_payload"]
 
         game_id = metadata_payload["game_id"]
-        game = db_utils.get_game(game_id)
+        game = db.get_game(game_id)
 
         logger.info(f"Game {game_id} starting")
-        if len(db_utils.get_participants(game_id)) < 2:
+        if len(db.get_participants(game_id)) < 2:
             logger.info("Not enough participants, canceling game")
-            db_utils.cancel_game(game_id)
+            db.cancel_game(game_id)
             logger.info("Game canceled successfully")
             if not ENV == Environment.DEV:
                 return
@@ -368,7 +368,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
 
         logger.info(f"Round {round_num} starting, posting rules")
 
-        round = db_utils.get_round(game_id, round_num)
+        round = db.get_round(game_id, round_num)
         round_obj = blotto.RoundLibrary.load_round(
             round.id, round.fields, round.soldiers
         )
@@ -412,14 +412,14 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
         logger.info(f"Round {round_num} has ended")
         logger.info("Calculating round results")
 
-        round = db_utils.get_round(game_id, round_num)
+        round = db.get_round(game_id, round_num)
         round_obj = blotto.RoundLibrary.load_round(
             round.id, round.fields, round.soldiers, game_id
         )
 
         round_obj.update_results()
 
-        scores = db_utils.get_round_results(game_id, round_num)
+        scores = db.get_round_results(game_id, round_num)
 
         message_params = {
             "token": BOT_TOKEN,
@@ -436,7 +436,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             ),
         }
 
-        next_round = db_utils.get_round(game_id, round_num + 1)
+        next_round = db.get_round(game_id, round_num + 1)
 
         if not next_round:
             message_params["metadata"] = {
@@ -465,7 +465,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
 
         logger.info("Posting game winner announcement")
 
-        scores = db_utils.get_game_results(game_id)
+        scores = db.get_game_results(game_id)
         winner = scores[0]
         client.chat_postMessage(
             token=BOT_TOKEN,
@@ -520,11 +520,11 @@ def cancel_game_handler(
 
     ack()
 
-    game = db_utils.get_game(game_id)
+    game = db.get_game(game_id)
 
     game.canceled = True
 
-    db_utils.update_records([game])
+    db.update_records([game])
 
     logger.info("Game attribute 'canceled' updated to 'True'")
 
@@ -553,7 +553,7 @@ def update_strategy_submission_modal_with_field_inputs(
 
     game_id = element["selected_option"]["value"]
 
-    game_round = db_utils.get_active_round(game_id)
+    game_round = db.get_active_round(game_id)
 
     if not game_round:
         logger.fatal("Failed to find the active round for the indicated game")
@@ -703,7 +703,7 @@ def handle_new_game_submission(
     game.announcement_channel = selected_channel
     game.announcement_ts = datetime.datetime.fromtimestamp(float(response.data["ts"]))
 
-    db_utils.update_records([game])
+    db.update_records([game])
 
     time.sleep(1)
 
@@ -727,9 +727,9 @@ def handle_new_game_submission(
 
 def run():
     if ENV == Environment.DEV:
-        models.MetaData.drop_all(db_utils.engine)
+        models.MetaData.drop_all(db.engine)
 
-    models.MetaData.create_all(db_utils.engine)
+    models.MetaData.create_all(db.engine)
 
     if ENV == Environment.DEV:
         blotto.RoundLibrary.ROUND_MAP = {0: blotto.TestRound}
@@ -767,7 +767,7 @@ def run():
                     user_id=USER_ID,
                 ),
             ]
-            db_utils.create_records(records)
+            db.create_records(records)
 
     handler = SocketModeHandler(app, os.getenv("APP_TOKEN"))
 
