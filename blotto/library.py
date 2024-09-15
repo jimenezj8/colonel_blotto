@@ -2,6 +2,8 @@ import random
 
 
 class BlottoLibrary:
+    """Base class for libraries of Blotto game components."""
+
     def __init__(self, member_type: type):
         self.MAP: dict[int, type] = {
             member.LIBRARY_ID: member
