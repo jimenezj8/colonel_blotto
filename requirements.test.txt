@@ -1,0 +1,17 @@
+# dependencies and versions used to test the library at the latest commit
+certifi==2024.8.30
+charset-normalizer==3.3.2
+greenlet==3.1.0
+idna==3.10
+iniconfig==2.0.0
+packaging==24.1
+pluggy==1.5.0
+psycopg2==2.9.9
+pytest==8.3.3
+pytz==2024.2
+requests==2.32.3
+slack_bolt==1.20.1
+slack_sdk==3.32.0
+SQLAlchemy==2.0.34
+typing_extensions==4.12.2
+urllib3==2.2.3
