@@ -1,4 +1,4 @@
-from blotto.round import BlottoRound
+from blotto.framework.round import BlottoRound
 
 
 class Game:

@@ -9,7 +9,7 @@ from blotto.exc import (
     BlottoNotDefinedError,
     BlottoValidationError,
 )
-from blotto.library import BlottoLibrary
+from blotto.framework.library import BlottoLibrary
 
 logging.basicConfig(level=logging.INFO)
 

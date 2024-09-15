@@ -1,4 +1,4 @@
-from blotto.library import BlottoLibrary
+from blotto.framework.library import BlottoLibrary
 
 
 class Deployer:
