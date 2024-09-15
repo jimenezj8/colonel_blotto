@@ -74,4 +74,4 @@ class BlottoRound:
         return self._soldiers
 
 
-RoundLibrary = BlottoLibrary(BlottoRound.__subclasses__())
+RoundLibrary = BlottoLibrary(BlottoRound)

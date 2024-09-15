@@ -273,4 +273,4 @@ Scoring will be as follows:
         return errors
 
 
-StageLibrary = BlottoLibrary(Stage.__subclasses__())
+StageLibrary = BlottoLibrary(Stage)

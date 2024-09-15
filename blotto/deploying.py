@@ -26,4 +26,4 @@ class LinearSoldierCost(PerSoldierCost):
     DESCRIPTION = "Deploying soldiers has a linearly increasing cost."
 
 
-DeployingLibrary = BlottoLibrary(Deployer.__subclasses__())
+DeployingLibrary = BlottoLibrary(Deployer)
