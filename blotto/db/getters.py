@@ -3,13 +3,12 @@ from typing import Sequence
 
 import sqlalchemy as sa
 
-from models import (
+from blotto.db.meta import SessionMaker
+from blotto.db.models import (
     Game,
     GameRound,
     Participant,
 )
-
-from .meta import SessionMaker
 
 
 def get_game_round(game_id: int, number: int) -> GameRound:

@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from .meta import SessionMaker
+from blotto.db.meta import SessionMaker
 
 
 def create_records(records: Iterable[any]):
