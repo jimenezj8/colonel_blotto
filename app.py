@@ -725,7 +725,7 @@ def handle_new_game_submission(
     logger.info("Success, new game flow complete")
 
 
-if __name__ == "__main__":
+def main():
     if ENV == Environment.DEV:
         models.MetaData.drop_all(db_utils.engine)
 
