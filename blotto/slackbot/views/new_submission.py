@@ -4,8 +4,8 @@ from typing import Iterable
 from slack_sdk.models import blocks
 from slack_sdk.models.views import View
 
-import messages
-from models import Game
+from blotto.db.models import Game
+from blotto.slackbot import messages
 
 
 def load(games: Iterable[Game]):

@@ -14,12 +14,10 @@ from slack_sdk.web.client import WebClient
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 import blotto
-import blotto.db as db
-import messages
-import models
-import slack_utils
-import views
+from blotto import db
+from blotto.db import models
 from blotto.exc import BlottoValidationError
+from blotto.slackbot import messages, utils, views
 from enums import Environment
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -232,7 +230,7 @@ def add_participant(event: dict, client: WebClient, logger: logging.Logger):
             channel=message_channel,
             text=messages.signup_request_success.format(
                 game_id=game.id,
-                game_start=slack_utils.DateTimeShortPretty(game.start),
+                game_start=utils.DateTimeShortPretty(game.start),
             ),
             user=user_id,
         )
@@ -379,7 +377,7 @@ def metadata_trigger_router(client: WebClient, payload: dict, logger: logging.Lo
             text=messages.round_start_announcement.format(
                 game_id=game_id,
                 round_num=round.number,
-                round_end=slack_utils.DateTimeShortPretty(round.end),
+                round_end=utils.DateTimeShortPretty(round.end),
                 round_rules=round_obj.RULES,
             ),
         )
@@ -689,7 +687,7 @@ def handle_new_game_submission(
             num_rounds=num_rounds,
             round_length=round_length,
             game_id=game.id,
-            game_start=slack_utils.DateTimeShortPretty(signup_close),
+            game_start=utils.DateTimeShortPretty(signup_close),
         ),
         metadata={
             "event_type": "game_announced",

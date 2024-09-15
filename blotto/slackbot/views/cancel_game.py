@@ -3,7 +3,7 @@ from typing import List
 from slack_sdk.models import blocks
 from slack_sdk.models.views import View
 
-from models import Game
+from blotto.db.models import Game
 
 
 def load(games: List[Game]):
