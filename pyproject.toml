@@ -25,6 +25,11 @@ slackbot = [
     "slack-sdk",
     "blotto[db]",
 ]
+test = [
+    "pytest",
+    "blotto[db]",
+    "blotto[slackbot]",
+]
 
 [project.scripts]
 blotto-slackbot = "blotto.slackbot.app:run"
