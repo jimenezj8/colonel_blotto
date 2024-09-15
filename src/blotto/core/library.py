@@ -13,4 +13,4 @@ class BlottoLibrary:
 
     def get_random(self) -> type:
         "Returns a random member of the library as a class reference"
-        return random.choice(self.MAP.values())
+        return random.choice(list(self.MAP.values()))
