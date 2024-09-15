@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blotto"
+version = "0.0.1"
+requires-python = ">=3.8"
+authors = [
+    {name = "Jovier Jiménez", email = "jthree8@gmail.com"},
+]
+description = "Blotto game framework and generator"
+readme = "README.md"
+license = {file = "LICENSE"}
+
+[project.optional-dependencies]
+db = [
+    "psycopg2",
+    "sqlalchemy>=1.4.44",
+]
+slackbot = [
+    "pytz",
+    "requests",
+    "slack-bolt",
+    "slack-sdk",
+    "blotto[db]",
+]
+
+[project.scripts]
+blotto-slackbot = "blotto.slackbot.app:run"
