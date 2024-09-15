@@ -1,10 +1,10 @@
 import logging
 from typing import Self
 
-from blotto.framework.deploying import Deployer, DeployingLibrary
-from blotto.framework.library import BlottoLibrary
-from blotto.framework.scoring import Scorer, ScoringLibrary
-from blotto.framework.stage import Stage, StageLibrary
+from blotto.core.deploying import Deployer, DeployingLibrary
+from blotto.core.library import BlottoLibrary
+from blotto.core.scoring import Scorer, ScoringLibrary
+from blotto.core.stage import Stage, StageLibrary
 
 logging.basicConfig(level=logging.INFO)
 

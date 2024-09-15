@@ -1,5 +1,5 @@
+from blotto.core.library import BlottoLibrary
 from blotto.exc import BlottoNotImplementedError
-from blotto.framework.library import BlottoLibrary
 
 
 class Scorer:

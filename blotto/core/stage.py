@@ -5,11 +5,11 @@ import logging
 import random
 from typing import Self
 
+from blotto.core.library import BlottoLibrary
 from blotto.exc import (
     BlottoNotDefinedError,
     BlottoValidationError,
 )
-from blotto.framework.library import BlottoLibrary
 
 logging.basicConfig(level=logging.INFO)
 
