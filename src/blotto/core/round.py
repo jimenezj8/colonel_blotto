@@ -65,13 +65,5 @@ class BlottoRound:
     def scorer(self) -> type[Scorer]:
         return self._scorer
 
-    @property
-    def fields(self) -> int:
-        return self._fields
-
-    @property
-    def soldiers(self) -> int:
-        return self._soldiers
-
 
 RoundLibrary = BlottoLibrary(BlottoRound)
