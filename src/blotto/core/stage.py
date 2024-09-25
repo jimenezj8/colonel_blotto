@@ -31,10 +31,10 @@ class Stage:
     - soldiers (int): the number of soliders in a BlottoRound instance
     """
 
-    LIBRARY_ID: int = None
-    RULES: str = None
-    _field_bounds: tuple[int, int] = None
-    _soldier_bounds: tuple[int, int] = None
+    LIBRARY_ID: int
+    RULES: str
+    _field_bounds: tuple[int, int]
+    _soldier_bounds: tuple[int, int]
 
     def __init__(
         self,
@@ -67,7 +67,7 @@ class Stage:
                 missing.append(attr)
 
         if missing:
-            raise BlottoNotDefinedError(missing)
+            raise BlottoNotDefinedError(self, missing)
 
     @classmethod
     def from_new(cls: Self) -> Self:

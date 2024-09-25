@@ -12,6 +12,8 @@ class BlottoRoundToGameRoundTranslationError(Exception):
 
 
 class BlottoNotDefinedError(Exception):
+    """Describes a Blotto object that is missing required attributes"""
+
     def __init__(self, obj: object, missing: Iterable):
         self.message = f"{type(obj)} is missing the following attributes: {missing}"
 
