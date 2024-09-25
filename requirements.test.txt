@@ -1,9 +1,11 @@
-# dependencies and versions used to test the library at the latest commit
+-e git+ssh://git@github.com/jimenezj8/colonel_blotto@44689766f2a054c053047ca4acac6367de5d9740#egg=blotto
 certifi==2024.8.30
 charset-normalizer==3.3.2
 greenlet==3.1.0
 idna==3.10
 iniconfig==2.0.0
+mypy==1.11.2
+mypy-extensions==1.0.0
 packaging==24.1
 pluggy==1.5.0
 psycopg2==2.9.9

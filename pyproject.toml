@@ -27,6 +27,7 @@ slackbot = [
 ]
 test = [
     "pytest",
+    "mypy",
     "blotto[db]",
     "blotto[slackbot]",
 ]
